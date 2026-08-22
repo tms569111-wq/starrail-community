@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title th:text="${title}">붕스청문회</title>
+    <link rel="preconnect" href="https://raw.githubusercontent.com">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="site-header" th:fragment="header">
+    <div class="site-header__inner">
+        <a class="brand" th:href="@{/}">
+            <span class="brand__mark">✦</span>
+            <span>붕스청문회</span>
+        </a>
+        <nav class="site-nav" aria-label="주 메뉴">
+            <a th:href="@{/}">캐릭터</a>
+            <th:block th:if="${currentUser != null}">
+                <a th:if="${currentUser.admin}" th:href="@{/admin}">운영</a>
+                <a th:href="@{/me/profile}">UID 인증</a>
+                <a class="status-chip" th:if="${!currentUser.nicknameConfigured}" th:href="@{/me/account}">닉네임 설정 필요</a>
+                <a class="status-chip" th:if="${currentUser.nicknameConfigured and !currentUser.canWrite}" th:href="@{/me/account}">작성 정지</a>
+                <a class="profile-link" th:href="@{/me/account}">
+                    <span th:text="${currentUser.nickname}">사용자</span>
+                    <span class="platinum-badge" th:if="${currentUser.badge != null}"
+                          th:style="|--badge-color:${currentUser.badge.colorHex}|"
+                          th:text="${currentUser.badge.label}">PLATINUM</span>
+                </a>
+                <form class="header-logout" method="post" th:action="@{/logout}">
+                    <button type="submit">로그아웃</button>
+                </form>
+            </th:block>
+            <a class="button button--primary button--small" th:if="${currentUser == null}" th:href="@{/login}">Google 로그인</a>
+        </nav>
+    </div>
+</header>
+<footer class="site-footer" th:fragment="footer">
+    <p>붕스청문회는 비공식 팬 프로젝트입니다. 투표 결과는 참여자 의견이며 공식 평가가 아닙니다.</p>
+</footer>
+</body>
+</html>

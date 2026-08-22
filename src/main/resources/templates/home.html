@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/site :: head('붕스청문회 · 캐릭터 평가')}"></head>
+<body>
+<header th:replace="~{fragments/site :: header}"></header>
+
+<main>
+    <div class="shell flash flash--success" th:if="${withdrawn}">회원 탈퇴와 개인정보 정리를 완료했습니다.</div>
+    <section class="hero shell">
+        <div class="hero__copy">
+            <span class="eyebrow">VERIFIED OWNER REVIEWS</span>
+            <h1>
+                <span class="hero__headline-line">보유 유저가 만드는</span>
+                <em class="hero__headline-line">붕스 캐릭터 청문회</em>
+            </h1>
+            <p>같은 캐릭터라도 성혼에 따라 평가는 달라집니다. UID로 보유를 인증하고, 실제 투자 단계별 의견을 확인하세요.</p>
+            <div class="hero__actions">
+                <a class="button button--primary" th:href="@{/me/profile}">내 캐릭터 인증</a>
+                <a class="button button--ghost" href="#characters">평가 둘러보기</a>
+            </div>
+            <div class="hero__facts">
+                <span><strong>0~6</strong> 정확한 성혼 저장</span>
+                <span><strong>5+3</strong> 전시 캐릭터 누적 인증</span>
+                <span><strong th:text="${currentVersion}">4.4</strong> 현재 평가 회차</span>
+            </div>
+        </div>
+        <div class="hero__visual" th:if="${heroCharacter != null}">
+            <span class="hero__orbit hero__orbit--one"></span>
+            <span class="hero__orbit hero__orbit--two"></span>
+            <img th:src="${heroCharacter.portraitUrl}" th:alt="${heroCharacter.name}">
+            <div class="hero__character-label">
+                <small>이번 청문회 대표</small>
+                <strong th:text="${heroCharacter.name}">캐릭터</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="catalog shell" id="characters">
+        <div class="section-heading">
+            <div>
+                <span class="eyebrow">COMMUNITY TIER BOARD</span>
+                <h2>전체 캐릭터 티어표</h2>
+            </div>
+            <p><strong th:text="${characterCount}">0</strong>명의 검색 결과</p>
+        </div>
+
+        <form class="filter-bar" method="get" th:action="@{/}">
+            <label class="search-field">
+                <span class="sr-only">캐릭터 검색</span>
+                <input type="search" name="q" th:value="${keyword}" placeholder="캐릭터 이름 검색">
+            </label>
+            <select name="element" aria-label="속성 필터">
+                <option th:each="option : ${elements}"
+                        th:value="${option.value}"
+                        th:text="${option.label}"
+                        th:selected="${option.value == selectedElement}">전체 속성</option>
+            </select>
+            <select name="path" aria-label="운명의 길 필터">
+                <option th:each="option : ${paths}"
+                        th:value="${option.value}"
+                        th:text="${option.label}"
+                        th:selected="${option.value == selectedPath}">전체 운명의 길</option>
+            </select>
+            <button class="button button--secondary" type="submit">찾기</button>
+        </form>
+
+        <div class="tier-board" th:if="${characterCount > 0}">
+            <section class="tier-lane"
+                     th:each="row : ${tierRows}"
+                     th:classappend="| tier-lane--${row.key}|">
+                <header class="tier-lane__rank">
+                    <strong th:text="${row.label}">T0</strong>
+                    <span th:text="${row.description}">환경 파괴자</span>
+                </header>
+                <div class="tier-lane__characters" th:if="${!row.characters.isEmpty()}">
+                    <a class="tier-character"
+                       th:each="card : ${row.characters}"
+                       th:href="@{/characters/{slug}(slug=${card.slug})}"
+                       th:title="|${card.elementName} · ${card.pathName} · ${card.voteCount}표|">
+                        <div class="tier-character__portrait"
+                             th:classappend="| element-${card.elementCode}|">
+                            <img loading="lazy" th:src="${card.iconUrl}" th:alt="${card.name}">
+                            <span th:text="${card.rarity == 5 ? '5★' : '4★'}">5★</span>
+                        </div>
+                        <strong th:text="${card.name}">캐릭터</strong>
+                        <small th:text="|${card.pathName} · ${card.voteCount}표|">운명의 길 · 0표</small>
+                        <i th:if="${card.voteCount > 0 and !card.sampleSufficient}">표본 부족</i>
+                    </a>
+                </div>
+                <div class="tier-lane__empty" th:if="${row.characters.isEmpty()}">
+                    아직 배치된 캐릭터가 없습니다.
+                </div>
+            </section>
+        </div>
+
+        <div class="empty-state" th:if="${characterCount == 0}">
+            <span>✦</span>
+            <h3>조건에 맞는 캐릭터가 없습니다</h3>
+            <a th:href="@{/}">필터 초기화</a>
+        </div>
+    </section>
+</main>
+
+<footer th:replace="~{fragments/site :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,50 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:starrail_hearing;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            scope: openid,profile,email
+  flyway:
+    enabled: false
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: create-drop
+
+app:
+  scheduling:
+    enabled: false
+  operator:
+    subject: web-smoke-operator
+    platinum-version: "4.4"
+    platinum-label: Test Platinum
+    platinum-color: "#8DE9FF"
+  account:
+    nickname-cooldown: 30d
+  aggregation:
+    interval: 3m
+  title-verification:
+    private-upload-dir: ./build/test-private-uploads
+    maximum-bytes: 716800
+    maximum-dimension: 1600
+    pending-ttl: 30d
+  mihomo:
+    base-url: https://api.mihomo.me
+    user-agent: StarrailHearing-Test/0.1
+    sync-cooldown: 60s
+    challenge-ttl: 10m
+    resource-base-url: https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/
+  enka:
+    base-url: https://enka.network
+    user-agent: StarrailHearing-Test/0.1
+  profile-client:
+    cache-ttl: 20s
+    circuit-failure-threshold: 3
+    circuit-open-duration: 30s

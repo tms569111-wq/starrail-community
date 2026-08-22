@@ -1,0 +1,11 @@
+.git
+.gradle
+build
+out
+.idea
+.vscode
+*.iml
+*.log
+.env
+private-uploads
+local-env.ps1

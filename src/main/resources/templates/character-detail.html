@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/site :: head('캐릭터 청문회 · 붕스청문회')}"></head>
+<body>
+<header th:replace="~{fragments/site :: header}"></header>
+
+<main class="shell page-shell character-page">
+    <a class="back-link" th:href="@{/}">← 전체 캐릭터</a>
+
+    <div class="flash flash--success" th:if="${successMessage}" th:text="${successMessage}"></div>
+    <div class="flash flash--error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <section class="character-hero" th:classappend="| element-${character.elementCode}|">
+        <div class="character-hero__copy">
+            <div class="character-hero__badges">
+                <span th:text="|${character.elementName} · ${character.pathName}|">속성 · 운명의 길</span>
+                <span th:text="|Version ${tier.gameVersion}|">Version 4.4</span>
+            </div>
+            <h1 th:text="${character.name}">캐릭터</h1>
+            <p>보유 유저의 성혼 단계별 평가를 모아 보는 캐릭터 청문회입니다.</p>
+            <div class="character-hero__score">
+                <div><strong th:text="${tier.aggregateTier}">집계 대기</strong><span>종합 티어</span></div>
+                <div><strong th:text="${tier.totalVotes}">0</strong><span>현재 필터 투표</span></div>
+                <div th:if="${tier.verifiedEidolon != null}">
+                    <strong th:text="|E${tier.verifiedEidolon}|">E0</strong><span>내 보유 인증</span>
+                </div>
+            </div>
+        </div>
+        <div class="character-hero__portrait">
+            <div class="character-hero__halo"></div>
+            <img th:src="${character.portraitUrl}" th:alt="${character.name}">
+        </div>
+    </section>
+
+    <nav class="eidolon-tabs" aria-label="성혼 단계 필터">
+        <a th:each="item : ${filters}"
+           th:href="@{/characters/{slug}(slug=${character.slug},filter=${item.name()},sort=${commentPage.sort.name()})}"
+           th:classappend="${tier.filter == item} ? ' is-active'"
+           th:text="${item.label}">전체</a>
+    </nav>
+
+    <div class="content-grid">
+        <section class="panel tier-panel">
+            <div class="panel-heading">
+                <div>
+                    <span class="eyebrow">TIER RESULT</span>
+                    <h2 th:text="|${tier.filter.label} 유저 평가|">전체 유저 평가</h2>
+                </div>
+                <span class="sample-warning" th:if="${tier.totalVotes > 0 and !tier.sampleSufficient}"
+                      th:text="|표본 ${tier.minimumSample}개 미만 · 참고용|">표본 부족</span>
+            </div>
+
+            <div class="tier-distribution">
+                <div class="tier-row" th:each="option : ${tier.options}">
+                    <strong th:text="${option.label}">T0</strong>
+                    <div class="tier-bar"><span th:style="|width:${option.percentage}%|"></span></div>
+                    <span th:text="|${option.percentage}% · ${option.count}표|">0% · 0표</span>
+                </div>
+            </div>
+
+            <div class="empty-inline" th:if="${tier.totalVotes == 0}">이 성혼 구간의 첫 평가를 기다리고 있습니다.</div>
+        </section>
+
+        <aside class="panel vote-panel">
+            <div class="panel-heading">
+                <div>
+                    <span class="eyebrow">CAST YOUR VOTE</span>
+                    <h2>내 평가 남기기</h2>
+                </div>
+                <span class="verified-badge" th:if="${tier.canVote}" th:text="|E${tier.verifiedEidolon} 인증|">E0 인증</span>
+            </div>
+
+            <form class="vote-form" th:if="${tier.canVote}" method="post"
+                  th:action="@{/characters/{slug}/votes(slug=${character.slug})}">
+                <input type="hidden" name="filter" th:value="${tier.filter.name()}">
+                <input type="hidden" name="sort" th:value="${commentPage.sort.name()}">
+                <label class="vote-option" th:each="option : ${tier.options}">
+                    <input type="radio" name="optionId" th:value="${option.id}"
+                           th:checked="${option.selected}" required>
+                    <span class="vote-option__tier" th:text="${option.label}">T0</span>
+                    <span><strong th:text="${option.description}">평가 설명</strong>
+                        <small th:if="${option.characterCopy != null}" th:text="${option.characterCopy}">캐릭터별 설명</small></span>
+                </label>
+                <p class="form-scope-note" th:text="|내 투표는 E${tier.verifiedEidolon} 보유 구간에 집계됩니다.|">
+                    내 보유 구간에 집계됩니다.
+                </p>
+                <button class="button button--primary button--full" type="submit">투표 저장</button>
+            </form>
+
+            <div class="locked-action" th:if="${!tier.canVote}">
+                <span>◇</span>
+                <h3 th:text="${currentUser == null ? '로그인이 필요합니다' : (!currentUser.canWrite ? '계정 설정을 확인해 주세요' : '보유 인증이 필요합니다')}">보유 인증이 필요합니다</h3>
+                <p th:text="${currentUser == null ? '결과는 누구나 볼 수 있고, 참여는 Google 로그인 후 가능합니다.' : (!currentUser.canWrite ? '닉네임 설정 또는 작성 제한 상태를 내 계정에서 확인해 주세요.' : '이 캐릭터가 전시된 UID를 인증하면 투표와 댓글을 작성할 수 있습니다.')}">안내</p>
+                <a class="button button--primary" th:if="${currentUser == null}" th:href="@{/login}">Google 로그인</a>
+                <a class="button button--primary" th:if="${currentUser != null and currentUser.canWrite}" th:href="@{/me/profile}">내 캐릭터 인증</a>
+                <a class="button button--primary" th:if="${currentUser != null and !currentUser.canWrite}" th:href="@{/me/account}">내 계정 확인</a>
+            </div>
+        </aside>
+    </div>
+
+    <section class="comments-section" id="comments">
+        <div class="section-heading section-heading--compact">
+            <div>
+                <span class="eyebrow">OWNER COMMENTS</span>
+                <h2 th:text="|${tier.filter.label} 보유 유저 댓글|">보유 유저 댓글</h2>
+            </div>
+            <p><strong th:text="${commentPage.totalElements}">0</strong>개의 의견</p>
+        </div>
+
+        <form class="comment-composer" th:if="${commentPage.canComment}" method="post"
+              th:action="@{/characters/{slug}/comments(slug=${character.slug})}">
+            <input type="hidden" name="filter" th:value="${tier.filter.name()}">
+            <input type="hidden" name="sort" th:value="${commentPage.sort.name()}">
+            <div class="comment-composer__author">
+                <span class="verified-badge" th:text="|E${commentPage.verifiedEidolon} 인증|">E0 인증</span>
+                <strong th:text="${currentUser.nickname}">사용자</strong>
+                <span class="platinum-badge" th:if="${currentUser.badge != null}"
+                      th:style="|--badge-color:${currentUser.badge.colorHex}|"
+                      th:text="${currentUser.badge.label}">PLATINUM</span>
+            </div>
+            <textarea name="content" maxlength="1000" rows="4"
+                      placeholder="실제로 사용하며 느낀 장점, 단점, 필요한 조합을 적어 주세요." required></textarea>
+            <div class="comment-composer__footer">
+                <span><span data-character-count>0 / 1000</span>
+                    · <span th:text="|E${commentPage.verifiedEidolon} 댓글로 분류|">보유 구간으로 분류</span></span>
+                <button class="button button--primary" type="submit">댓글 등록</button>
+            </div>
+        </form>
+
+        <div class="locked-comment" th:if="${!commentPage.canComment}">
+            <span th:if="${!commentPage.authenticated}">Google 로그인 후 UID를 인증하면 댓글을 작성할 수 있습니다. <a th:href="@{/login}">로그인</a></span>
+            <span th:if="${commentPage.authenticated and currentUser.canWrite}">보유 인증된 사용자만 댓글을 작성할 수 있습니다.</span>
+            <span th:if="${commentPage.authenticated and !currentUser.canWrite}">닉네임 설정 또는 작성 제한 상태를 내 계정에서 확인해 주세요.</span>
+        </div>
+
+        <div class="best-comments" th:if="${!commentPage.best.isEmpty()}">
+            <h3><span>BEST</span> 이 성혼 구간의 추천 댓글</h3>
+            <article class="comment-card comment-card--best" th:each="comment : ${commentPage.best}">
+                <div class="comment-card__header">
+                    <div>
+                        <span class="verified-badge" th:text="|E${comment.eidolon}|">E0</span>
+                        <strong th:text="${comment.nickname}">작성자</strong>
+                        <span class="platinum-badge" th:if="${comment.badge != null}"
+                              th:style="|--badge-color:${comment.badge.colorHex}|"
+                              th:text="|${comment.badge.label} · v${comment.badge.version}|">PLATINUM</span>
+                    </div>
+                    <span th:text="|추천 ${comment.likeCount}|">추천 0</span>
+                </div>
+                <p th:text="${comment.content}">댓글</p>
+            </article>
+        </div>
+
+        <div class="comment-toolbar">
+            <div class="sort-tabs">
+                <a th:each="item : ${sorts}"
+                   th:href="@{/characters/{slug}(slug=${character.slug},filter=${tier.filter.name()},sort=${item.name()})} + '#comments'"
+                   th:classappend="${commentPage.sort == item} ? ' is-active'"
+                   th:text="${item.label}">추천순</a>
+            </div>
+        </div>
+
+        <div class="comment-list" th:if="${!commentPage.comments.isEmpty()}">
+            <article class="comment-card" th:each="comment : ${commentPage.comments}">
+                <div class="comment-card__header">
+                    <div>
+                        <span class="verified-badge" th:text="|E${comment.eidolon}|">E0</span>
+                        <strong th:text="${comment.nickname}">작성자</strong>
+                        <span class="platinum-badge" th:if="${comment.badge != null}"
+                              th:style="|--badge-color:${comment.badge.colorHex}|"
+                              th:text="|${comment.badge.label} · v${comment.badge.version}|">PLATINUM</span>
+                        <span class="mine-badge" th:if="${comment.mine}">내 댓글</span>
+                    </div>
+                    <time th:text="${comment.createdAt}">작성일</time>
+                </div>
+                <p th:text="${comment.content}">댓글 내용</p>
+                <div class="comment-card__actions">
+                    <form method="post" th:if="${commentPage.authenticated and currentUser.canWrite and !comment.mine and comment.status.name() == 'ACTIVE'}"
+                          th:action="@{/characters/{slug}/comments/{id}/like(slug=${character.slug},id=${comment.id})}">
+                        <input type="hidden" name="filter" th:value="${tier.filter.name()}">
+                        <input type="hidden" name="sort" th:value="${commentPage.sort.name()}">
+                        <button class="like-button" th:classappend="${comment.liked} ? ' is-liked'" type="submit"
+                                th:text="|◆ 추천 ${comment.likeCount}|">◆ 추천 0</button>
+                    </form>
+                    <span th:if="${comment.mine or !commentPage.authenticated or !currentUser.canWrite or comment.status.name() != 'ACTIVE'}" th:text="|추천 ${comment.likeCount}|">추천 0</span>
+                    <details class="inline-edit" th:if="${comment.mine and currentUser.canWrite}">
+                        <summary>수정</summary>
+                        <form method="post" th:action="@{/characters/{slug}/comments/{id}/edit(slug=${character.slug},id=${comment.id})}">
+                            <input type="hidden" name="filter" th:value="${tier.filter.name()}">
+                            <input type="hidden" name="sort" th:value="${commentPage.sort.name()}">
+                            <textarea name="content" maxlength="1000" rows="3" th:text="${comment.content}" required></textarea>
+                            <button class="button button--secondary button--small" type="submit">수정 저장</button>
+                        </form>
+                    </details>
+                    <form method="post" th:if="${comment.mine and currentUser.canWrite}" data-confirm-delete
+                          th:action="@{/characters/{slug}/comments/{id}/delete(slug=${character.slug},id=${comment.id})}">
+                        <input type="hidden" name="filter" th:value="${tier.filter.name()}">
+                        <input type="hidden" name="sort" th:value="${commentPage.sort.name()}">
+                        <button class="text-button text-button--danger" type="submit">삭제</button>
+                    </form>
+                    <details class="safety-menu" th:if="${commentPage.authenticated and currentUser.canWrite and !comment.mine and comment.status.name() == 'ACTIVE'}">
+                        <summary>신고</summary>
+                        <form class="report-form" method="post" th:action="@{/characters/{slug}/comments/{id}/report(slug=${character.slug},id=${comment.id})}">
+                            <input type="hidden" name="filter" th:value="${tier.filter.name()}">
+                            <input type="hidden" name="sort" th:value="${commentPage.sort.name()}">
+                            <select name="reason" required>
+                                <option th:each="reason : ${reportReasons}" th:value="${reason.name()}" th:text="${reason.label}">사유</option>
+                            </select>
+                            <textarea name="details" maxlength="500" rows="2" placeholder="추가 설명(선택)"></textarea>
+                            <button class="button button--danger button--small" type="submit">신고 접수</button>
+                        </form>
+                    </details>
+                    <details class="inline-reply" th:if="${commentPage.canComment and comment.status.name() == 'ACTIVE'}">
+                        <summary>답글</summary>
+                        <form method="post" th:action="@{/characters/{slug}/comments/{id}/replies(slug=${character.slug},id=${comment.id})}">
+                            <input type="hidden" name="filter" th:value="${tier.filter.name()}">
+                            <input type="hidden" name="sort" th:value="${commentPage.sort.name()}">
+                            <textarea name="content" maxlength="1000" rows="3" placeholder="답글을 입력해 주세요." required></textarea>
+                            <button class="button button--secondary button--small" type="submit">답글 등록</button>
+                        </form>
+                    </details>
+                </div>
+                <button class="text-button reply-loader" type="button" th:if="${comment.replyCount > 0}"
+                        th:attr="data-replies-url=@{/characters/{slug}/comments/{id}/replies(slug=${character.slug},id=${comment.id},filter=${tier.filter.name()},sort=${commentPage.sort.name()})},data-replies-target=|replies-${comment.id}|"
+                        th:text="|답글 ${comment.replyCount}개 보기|">답글 보기</button>
+                <div class="reply-thread" th:id="|replies-${comment.id}|" aria-live="polite"></div>
+            </article>
+        </div>
+
+        <div class="empty-state empty-state--small" th:if="${commentPage.comments.isEmpty()}">
+            <span>◇</span><h3>아직 댓글이 없습니다</h3><p>이 성혼 구간의 첫 사용 경험을 남겨 주세요.</p>
+        </div>
+
+        <nav class="pagination" th:if="${commentPage.totalPages > 1}">
+            <a th:if="${commentPage.page > 0}"
+               th:href="@{/characters/{slug}(slug=${character.slug},filter=${tier.filter.name()},sort=${commentPage.sort.name()},page=${commentPage.page - 1})} + '#comments'">이전</a>
+            <span th:text="|${commentPage.page + 1} / ${commentPage.totalPages}|">1 / 1</span>
+            <a th:if="${commentPage.page + 1 < commentPage.totalPages}"
+               th:href="@{/characters/{slug}(slug=${character.slug},filter=${tier.filter.name()},sort=${commentPage.sort.name()},page=${commentPage.page + 1})} + '#comments'">다음</a>
+        </nav>
+    </section>
+</main>
+
+<footer th:replace="~{fragments/site :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

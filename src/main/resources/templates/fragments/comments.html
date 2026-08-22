@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="replies" class="reply-thread__items">
+    <article class="comment-card comment-card--reply" th:each="reply : ${replies}">
+        <div class="comment-card__header">
+            <div>
+                <span class="verified-badge" th:text="|E${reply.eidolon}|">E0</span>
+                <strong th:text="${reply.nickname}">작성자</strong>
+                <span class="platinum-badge" th:if="${reply.badge != null}"
+                      th:style="|--badge-color:${reply.badge.colorHex}|"
+                      th:text="|${reply.badge.label} · v${reply.badge.version}|">PLATINUM</span>
+                <span class="mine-badge" th:if="${reply.mine}">내 답글</span>
+            </div>
+            <time th:text="${reply.createdAt}">작성일</time>
+        </div>
+        <p th:text="${reply.content}">답글 내용</p>
+        <div class="comment-card__actions">
+            <form method="post" th:if="${authenticated and canWrite and !reply.mine}"
+                  th:action="@{/characters/{slug}/comments/{id}/like(slug=${character.slug},id=${reply.id})}">
+                <input type="hidden" name="filter" th:value="${filter.name()}">
+                <input type="hidden" name="sort" th:value="${sort.name()}">
+                <button class="like-button" th:classappend="${reply.liked} ? ' is-liked'" type="submit"
+                        th:text="|◆ 추천 ${reply.likeCount}|">◆ 추천 0</button>
+            </form>
+            <span th:if="${reply.mine or !authenticated or !canWrite}" th:text="|추천 ${reply.likeCount}|">추천 0</span>
+            <details class="inline-edit" th:if="${reply.mine and canWrite}">
+                <summary>수정</summary>
+                <form method="post" th:action="@{/characters/{slug}/comments/{id}/edit(slug=${character.slug},id=${reply.id})}">
+                    <input type="hidden" name="filter" th:value="${filter.name()}">
+                    <input type="hidden" name="sort" th:value="${sort.name()}">
+                    <textarea name="content" maxlength="1000" rows="3" th:text="${reply.content}" required></textarea>
+                    <button class="button button--secondary button--small" type="submit">수정 저장</button>
+                </form>
+            </details>
+            <form method="post" th:if="${reply.mine and canWrite}" data-confirm-delete
+                  th:action="@{/characters/{slug}/comments/{id}/delete(slug=${character.slug},id=${reply.id})}">
+                <input type="hidden" name="filter" th:value="${filter.name()}">
+                <input type="hidden" name="sort" th:value="${sort.name()}">
+                <button class="text-button text-button--danger" type="submit">삭제</button>
+            </form>
+            <details class="safety-menu" th:if="${authenticated and canWrite and !reply.mine}">
+                <summary>신고</summary>
+                <form class="report-form" method="post"
+                      th:action="@{/characters/{slug}/comments/{id}/report(slug=${character.slug},id=${reply.id})}">
+                    <input type="hidden" name="filter" th:value="${filter.name()}">
+                    <input type="hidden" name="sort" th:value="${sort.name()}">
+                    <select name="reason" required>
+                        <option th:each="reason : ${reportReasons}" th:value="${reason.name()}"
+                                th:text="${reason.label}">사유</option>
+                    </select>
+                    <textarea name="details" maxlength="500" rows="2" placeholder="추가 설명(선택)"></textarea>
+                    <button class="button button--danger button--small" type="submit">신고 접수</button>
+                </form>
+            </details>
+        </div>
+    </article>
+    <p class="empty-inline" th:if="${replies.isEmpty()}">등록된 답글이 없습니다.</p>
+    <p class="empty-inline" th:if="${totalReplies > replies.size()}"
+       th:text="|답글이 많아 앞에서부터 최대 100개만 표시합니다. 전체 ${totalReplies}개|">답글 제한</p>
+</div>
+</body>
+</html>

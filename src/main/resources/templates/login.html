@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/site :: head('로그인 · 붕스청문회')}"></head>
+<body>
+<header th:replace="~{fragments/site :: header}"></header>
+<main class="shell auth-shell">
+    <section class="auth-card">
+        <span class="eyebrow">MEMBER ACCESS</span>
+        <h1>Google로 시작하기</h1>
+        <p>첫 로그인 시 자동으로 회원 계정이 만들어집니다. 비밀번호는 사이트에 저장하지 않습니다.</p>
+        <div class="flash flash--error" th:if="${param.error}">로그인하지 못했습니다. 탈퇴한 계정이거나 Google 설정을 확인해야 합니다.</div>
+        <div class="flash flash--success" th:if="${param.logout}">로그아웃했습니다.</div>
+        <a class="google-login-button" th:href="@{/oauth2/authorization/google}">
+            <span>G</span> Google 계정으로 계속
+        </a>
+        <a class="back-link" th:href="@{/}">로그인 없이 결과 먼저 보기</a>
+    </section>
+</main>
+<footer th:replace="~{fragments/site :: footer}"></footer>
+</body>
+</html>

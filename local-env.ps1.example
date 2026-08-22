@@ -1,0 +1,19 @@
+# 이 파일을 local-env.ps1로 복사한 뒤 따옴표 안의 값을 채우세요.
+# local-env.ps1은 .gitignore에 포함되어 Git에 올라가지 않습니다.
+
+$env:DB_URL = "jdbc:mysql://localhost:3306/starrail_hearing?serverTimezone=UTC&characterEncoding=UTF-8"
+$env:DB_USERNAME = "oracle_app"
+$env:DB_PASSWORD = "change-this-password"
+
+$env:GOOGLE_CLIENT_ID = "your-google-client-id.apps.googleusercontent.com"
+$env:GOOGLE_CLIENT_SECRET = "your-google-client-secret"
+$env:APP_ADMIN_SUBJECT = "your-stable-google-sub"
+
+$env:APP_PLATINUM_VERSION = "4.4"
+$env:APP_PLATINUM_LABEL = "이상중재 PLATINUM"
+$env:APP_PLATINUM_COLOR = "#8DE9FF"
+
+# 본인 GitHub 저장소나 이메일처럼 연락 가능한 값을 넣는 것을 권장합니다.
+$env:MIHOMO_USER_AGENT = "StarrailHearing/0.1 contact=your-contact"
+$env:ENKA_USER_AGENT = "StarrailHearing/0.1 contact=your-contact"
+$env:TITLE_PRIVATE_UPLOAD_DIR = ".\private-uploads\title-verification"

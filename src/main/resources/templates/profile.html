@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/site :: head('내 캐릭터 인증 · 붕스청문회')}"></head>
+<body>
+<header th:replace="~{fragments/site :: header}"></header>
+
+<main class="shell page-shell">
+    <a class="back-link" th:href="@{/}">← 캐릭터 목록</a>
+
+    <div class="page-title">
+        <span class="eyebrow">MY STAR RAIL PROFILE</span>
+        <h1>내 캐릭터 인증</h1>
+        <p>먼저 게임 소개문을 바꾼 뒤 UID 소유자임을 확인하고, 전시 캐릭터를 누적합니다.</p>
+    </div>
+
+    <div class="flash flash--success" th:if="${successMessage}" th:text="${successMessage}"></div>
+    <div class="flash flash--error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <section class="profile-panel profile-panel--intro" th:if="${!profile.exists}">
+        <div class="step-number">01</div>
+        <div class="profile-panel__content">
+            <h2>먼저 게임 소개문을 바꿔 주세요</h2>
+            <p>게임을 켜고 휴대폰 메뉴 → 프로필 → 소개 수정에서 아래 문구를 저장합니다.</p>
+            <div class="challenge-code">
+                <code id="challengeCodeBeforeUid">투표!</code>
+                <button class="icon-button" type="button" data-copy-target="challengeCodeBeforeUid">복사</button>
+            </div>
+            <p>소개문을 저장한 뒤 아래에서 UID를 입력해 주세요.</p>
+        </div>
+    </section>
+
+    <section class="profile-panel" th:if="${!profile.exists}">
+        <div class="step-number">02</div>
+        <div>
+            <h2>게임 UID 입력</h2>
+            <p>공개 프로필에서 닉네임과 소개문 <strong>투표!</strong>를 확인합니다. UID는 숫자 9자리입니다.</p>
+            <form class="uid-form" th:if="${currentUser.canWrite}" method="post" th:action="@{/me/profile/challenge}">
+                <input type="text" name="uid" inputmode="numeric" pattern="[0-9]{9}" maxlength="9"
+                       placeholder="예: 800000000" required>
+                <button class="button button--primary" type="submit">프로필 찾기</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="profile-panel profile-panel--pending"
+             th:if="${profile.exists and profile.status.name() == 'PENDING'}">
+        <div class="step-number">03</div>
+        <div class="profile-panel__content">
+            <div class="profile-summary">
+                <div>
+                    <span>확인된 프로필</span>
+                    <strong th:text="${profile.nickname}">닉네임</strong>
+                </div>
+                <div>
+                    <span>UID</span>
+                    <strong th:text="${profile.uid}">000000000</strong>
+                </div>
+            </div>
+            <h2>게임 소개문을 마지막으로 확인해 주세요</h2>
+            <div class="challenge-code">
+                <code id="challengeCode" th:text="${profile.challengeCode}">HSRH-ABC123</code>
+                <button class="icon-button" type="button" data-copy-target="challengeCode">복사</button>
+            </div>
+            <ol class="instruction-list">
+                <li>게임 소개문에 위 인증문구가 저장되어 있는지 확인</li>
+                <li>전시 캐릭터와 지원 캐릭터를 공개 상태로 설정</li>
+                <li>아래 버튼을 눌러 인증과 캐릭터 등록 완료</li>
+            </ol>
+            <form method="post" th:if="${currentUser.canWrite}" th:action="@{/me/profile/verify}">
+                <button class="button button--primary" type="submit">인증문구 확인</button>
+            </form>
+        </div>
+    </section>
+
+    <section th:if="${profile.exists and profile.status.name() == 'VERIFIED'}">
+        <div class="verified-profile-card">
+            <div class="verified-profile-card__badge">VERIFIED</div>
+            <div>
+                <span>게임 프로필</span>
+                <h2 th:text="${profile.nickname}">닉네임</h2>
+                <p th:text="|UID ${profile.uid}|">UID</p>
+            </div>
+            <div class="verified-profile-card__stats">
+                <strong th:text="${profile.characters.size()}">0</strong>
+                <span>누적 인증 캐릭터</span>
+            </div>
+            <form method="post" th:if="${currentUser.canWrite}" th:action="@{/me/profile/refresh}">
+                <button class="button button--secondary" type="submit">현재 8명 다시 불러오기</button>
+            </form>
+        </div>
+
+        <div class="sync-tip">
+            <strong>더 많은 캐릭터를 인증하려면</strong>
+            <p>게임에서 전시 5명과 지원 3명을 바꾼 뒤 Enka 캐시가 만료될 때까지 기다렸다가 다시 불러오세요.
+                변경 직후에는 이전 구성이 보일 수 있으며, 버튼을 반복해서 눌러도 Enka 캐시는 강제로 갱신되지 않습니다.
+                이전에 인증한 캐릭터는 삭제되지 않습니다.</p>
+        </div>
+
+        <div class="section-heading section-heading--compact">
+            <div><h2>인증된 캐릭터</h2></div>
+        </div>
+        <div class="verified-character-grid">
+            <a class="verified-character"
+               th:each="owned : ${profile.characters}"
+               th:href="@{/characters/{slug}(slug=${owned.slug})}">
+                <img th:src="${owned.iconUrl}" th:alt="${owned.name}">
+                <div>
+                    <strong th:text="${owned.name}">캐릭터</strong>
+                    <span th:text="|E${owned.eidolon} 인증|">E0 인증</span>
+                </div>
+            </a>
+        </div>
+    </section>
+    <div class="locked-comment" th:if="${!currentUser.canWrite}">
+        UID 인증·갱신 전에 <a th:href="@{/me/account}">닉네임 설정 또는 작성 제한 상태</a>를 확인해 주세요.
+    </div>
+</main>
+
+<footer th:replace="~{fragments/site :: footer}"></footer>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

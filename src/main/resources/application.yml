@@ -1,0 +1,74 @@
+spring:
+  application:
+    name: starrail-hearing
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/starrail_hearing?serverTimezone=UTC&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:oracle_app}
+    password: ${DB_PASSWORD:}
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:local-client-id-not-configured}
+            client-secret: ${GOOGLE_CLIENT_SECRET:local-client-secret-not-configured}
+            scope: openid,profile,email
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      max-file-size: 700KB
+      max-request-size: 1MB
+  http:
+    clients:
+      connect-timeout: 3s
+      read-timeout: 8s
+  thymeleaf:
+    cache: false
+
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+  error:
+    whitelabel:
+      enabled: false
+
+app:
+  operator:
+    subject: ${APP_ADMIN_SUBJECT:}
+    platinum-version: ${APP_PLATINUM_VERSION:4.4}
+    platinum-label: ${APP_PLATINUM_LABEL:이상중재 PLATINUM}
+    platinum-color: ${APP_PLATINUM_COLOR:#8de9ff}
+  account:
+    nickname-cooldown: ${NICKNAME_CHANGE_COOLDOWN:30d}
+  aggregation:
+    interval: ${TIER_AGGREGATION_INTERVAL:3m}
+  title-verification:
+    private-upload-dir: ${TITLE_PRIVATE_UPLOAD_DIR:./private-uploads/title-verification}
+    maximum-bytes: ${TITLE_MAXIMUM_BYTES:716800}
+    maximum-dimension: ${TITLE_MAXIMUM_DIMENSION:1600}
+    pending-ttl: ${TITLE_PENDING_TTL:30d}
+  mihomo:
+    base-url: ${MIHOMO_BASE_URL:https://api.mihomo.me}
+    user-agent: ${MIHOMO_USER_AGENT:StarrailHearing/0.1 contact=local-development}
+    sync-cooldown: ${PROFILE_SYNC_COOLDOWN:60s}
+    challenge-ttl: ${PROFILE_CHALLENGE_TTL:10m}
+    resource-base-url: ${STAR_RAIL_RESOURCE_BASE_URL:https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/}
+  enka:
+    base-url: ${ENKA_BASE_URL:https://enka.network}
+    user-agent: ${ENKA_USER_AGENT:StarrailHearing/0.1 contact=local-development}
+  profile-client:
+    cache-ttl: ${PROFILE_CACHE_TTL:20s}
+    circuit-failure-threshold: ${PROFILE_CIRCUIT_FAILURE_THRESHOLD:3}
+    circuit-open-duration: ${PROFILE_CIRCUIT_OPEN_DURATION:30s}

@@ -1,0 +1,12 @@
+.gradle/
+build/
+out/
+.idea/
+*.iml
+.vscode/
+.env
+local-env.ps1
+application-local.yml
+src/main/resources/application-local.yml
+*.log
+private-uploads/

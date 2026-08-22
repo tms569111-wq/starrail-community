@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/site :: head('운영자 센터 · 붕스청문회')}"></head>
+<body>
+<header th:replace="~{fragments/site :: header}"></header>
+<main class="shell page-shell admin-page">
+    <div class="page-title">
+        <span class="eyebrow">ADMIN CONTROL</span>
+        <h1>운영자 센터</h1>
+        <p>버전·캐릭터·신고·칭호·회원 제재와 변경 불가 감사 기록을 관리합니다.</p>
+    </div>
+    <div class="flash flash--success" th:if="${successMessage}" th:text="${successMessage}"></div>
+    <div class="flash flash--error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <nav class="admin-nav">
+        <a href="#versions">버전</a><a href="#characters">캐릭터</a><a href="#reports">신고</a>
+        <a href="#titles">칭호</a><a href="#members">회원</a><a href="#history">감사 기록</a>
+    </nav>
+
+    <section class="admin-stats">
+        <div><strong th:text="${dashboard.summary.totalMembers}">0</strong><span>전체 회원</span></div>
+        <div><strong th:text="${dashboard.summary.activeMembers}">0</strong><span>활성 회원</span></div>
+        <div><strong th:text="${dashboard.summary.suspendedMembers}">0</strong><span>작성 정지</span></div>
+        <div><strong th:text="${dashboard.summary.joinedThisMonth}">0</strong><span>이번 달 가입</span></div>
+        <div><strong th:text="${dashboard.summary.deletedThisMonth}">0</strong><span>이번 달 탈퇴</span></div>
+        <div><strong th:text="${dashboard.summary.pendingReports}">0</strong><span>대기 신고</span></div>
+        <div><strong th:text="${dashboard.summary.votes}">0</strong><span>원시 투표</span></div>
+        <div><strong th:text="${dashboard.summary.comments}">0</strong><span>댓글·답글</span></div>
+    </section>
+
+    <section class="admin-section" id="versions">
+        <div class="section-heading section-heading--compact"><div><span class="eyebrow">VERSION LIFECYCLE</span><h2>평가 버전</h2></div></div>
+        <form class="admin-action-form" method="post" th:action="@{/admin/versions}">
+            <input name="versionCode" maxlength="20" placeholder="예: 4.5" required>
+            <button class="button button--primary button--small" type="submit">YAML로 초안 생성</button>
+        </form>
+        <div class="admin-card" th:each="version : ${versions}">
+            <div class="admin-card__heading">
+                <div><span class="status-chip" th:text="${version.status}">DRAFT</span>
+                    <strong th:text="|Version ${version.versionCode} · 최소 표본 ${version.minimumSample}|">버전</strong></div>
+                <span th:text="|집계 ${version.aggregationStatus}|">집계 상태</span>
+            </div>
+            <details><summary>확정 규칙 스냅샷 보기(읽기 전용)</summary><pre th:text="${version.rulesSnapshotJson}">JSON</pre></details>
+            <details th:if="${version.archiveJson != null}"><summary>종료 아카이브 보기(읽기 전용)</summary><pre th:text="${version.archiveJson}">JSON</pre></details>
+            <form method="post" th:if="${version.status.name() == 'DRAFT'}"
+                  th:action="@{/admin/versions/{id}/open(id=${version.id})}">
+                <button class="button button--primary button--small" type="submit">버전 열기</button>
+            </form>
+            <form class="admin-action-form" method="post"
+                  th:if="${version.status.name() == 'OPEN' or version.status.name() == 'CLOSING'}"
+                  th:action="@{/admin/versions/{id}/close(id=${version.id})}">
+                <input name="confirmation" th:placeholder="|종료 확인: ${version.versionCode} 입력|" required>
+                <button class="button button--danger button--small" type="submit">최종 집계 후 종료</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="admin-section" id="characters">
+        <div class="section-heading section-heading--compact"><div><span class="eyebrow">CHARACTER CATALOG</span><h2>캐릭터·외부 ID</h2></div></div>
+        <details class="admin-card"><summary>새 캐릭터 추가</summary>
+            <form class="admin-grid-form" method="post" th:action="@{/admin/characters}">
+                <input name="canonicalExternalId" placeholder="기준 외부 ID" required>
+                <input name="slug" placeholder="slug" required><input name="name" placeholder="이름" required>
+                <select name="rarity"><option value="5">5성</option><option value="4">4성</option></select>
+                <input name="pathCode" placeholder="운명의 길 코드" required><input name="pathName" placeholder="운명의 길 이름" required>
+                <input name="elementCode" placeholder="속성 코드" required><input name="elementName" placeholder="속성 이름" required>
+                <input name="iconUrl" placeholder="아이콘 URL" required><input name="portraitUrl" placeholder="전신 이미지 URL" required>
+                <input name="displayOrder" type="number" min="0" value="999" required>
+                <button class="button button--primary button--small" type="submit">추가</button>
+            </form>
+        </details>
+        <details class="admin-card" th:each="character : ${characters}">
+            <summary th:text="|#${character.id} ${character.name} · ${character.status}|">캐릭터</summary>
+            <form class="admin-grid-form" method="post" th:action="@{/admin/characters/{id}(id=${character.id})}">
+                <input name="canonicalExternalId" th:value="${character.canonicalExternalId}" required>
+                <input name="slug" th:value="${character.slug}" required><input name="name" th:value="${character.name}" required>
+                <select name="rarity"><option value="5" th:selected="${character.rarity == 5}">5성</option><option value="4" th:selected="${character.rarity == 4}">4성</option></select>
+                <input name="pathCode" th:value="${character.pathCode}" required><input name="pathName" th:value="${character.pathName}" required>
+                <input name="elementCode" th:value="${character.elementCode}" required><input name="elementName" th:value="${character.elementName}" required>
+                <input name="iconUrl" th:value="${character.iconUrl}" required><input name="portraitUrl" th:value="${character.portraitUrl}" required>
+                <input name="displayOrder" type="number" min="0" th:value="${character.displayOrder}" required>
+                <button class="button button--secondary button--small" type="submit">정보 저장</button>
+            </form>
+            <form method="post" th:action="@{/admin/characters/{id}/visibility(id=${character.id})}">
+                <input type="hidden" name="visible" th:value="${character.status.name() != 'ACTIVE'}">
+                <button class="button button--ghost button--small" type="submit"
+                        th:text="${character.status.name() == 'ACTIVE'} ? '숨기기' : '공개하기'">상태</button>
+            </form>
+            <p th:each="alias : ${character.aliases}" th:text="|${alias.provider}: ${alias.externalId}|">별칭</p>
+            <form class="admin-action-form" method="post" th:action="@{/admin/characters/{id}/aliases(id=${character.id})}">
+                <select name="provider"><option th:each="provider : ${profileProviderOptions}" th:value="${provider.name()}" th:text="${provider.name()}">MIHOMO</option></select>
+                <input name="externalId" maxlength="20" placeholder="외부 ID" required>
+                <button class="button button--ghost button--small" type="submit">별칭 연결</button>
+            </form>
+        </details>
+    </section>
+
+    <section class="admin-section" id="reports">
+        <div class="section-heading section-heading--compact"><div><span class="eyebrow">REPORT QUEUE</span><h2>댓글·답글 신고</h2></div></div>
+        <div class="admin-card" th:each="report : ${dashboard.reports}">
+            <div class="admin-card__heading">
+                <div><span class="status-chip" th:text="${report.status}">PENDING</span><strong th:text="|${report.reasonLabel} · ${report.characterName}|">신고</strong></div>
+                <time th:text="${report.createdAt}">일시</time>
+            </div>
+            <p><strong th:text="|신고자: ${report.reporterNickname} / 작성자: ${report.authorNickname}|">사용자</strong></p>
+            <blockquote th:text="${report.contentSnapshot}">접수 당시 내용</blockquote>
+            <p th:if="${report.details != null}" th:text="${report.details}">추가 설명</p>
+            <form class="admin-action-form" th:if="${report.status.name() == 'PENDING'}" method="post"
+                  th:action="@{/admin/reports/{id}(id=${report.id})}">
+                <select name="decision"><option value="ACTION">조치 후 종결</option><option value="DISMISS">신고 기각</option></select>
+                <label><input type="checkbox" name="hideComment" value="true"> 댓글 숨김</label>
+                <select name="sanction"><option value="">회원 제재 없음</option><option th:each="period : ${sanctionOptions}" th:value="${period.name()}" th:text="${period.name()}">기간</option></select>
+                <input name="note" maxlength="500" placeholder="처리 메모" required>
+                <button class="button button--primary button--small" type="submit">처리</button>
+            </form>
+            <form class="admin-action-form" th:if="${report.commentStatus.name() == 'HIDDEN_BY_MODERATOR'}"
+                  method="post" th:action="@{/admin/comments/{id}/restore(id=${report.commentId})}">
+                <input name="reason" maxlength="500" placeholder="복원 사유" required>
+                <button class="button button--secondary button--small" type="submit">댓글 복원</button>
+            </form>
+        </div>
+        <p class="empty-inline" th:if="${dashboard.reports.isEmpty()}">접수된 신고가 없습니다.</p>
+    </section>
+
+    <section class="admin-section" id="titles">
+        <div class="section-heading section-heading--compact"><div><span class="eyebrow">PRIVATE EVIDENCE</span><h2>칭호 인증</h2></div></div>
+        <div class="admin-card" th:each="request : ${titleRequests}">
+            <div class="admin-card__heading"><strong th:text="|${request.memberNickname} · Version ${request.gameVersion}|">신청</strong><span class="status-chip" th:text="${request.status}">PENDING</span></div>
+            <a th:if="${request.imageAvailable}" target="_blank" rel="noopener" th:href="@{/admin/title-requests/{id}/image(id=${request.id})}">비공개 증빙 열기</a>
+            <p th:if="${request.reviewNote != null}" th:text="${request.reviewNote}">검토 메모</p>
+            <form class="admin-action-form" th:if="${request.status.name() == 'PENDING'}" method="post" th:action="@{/admin/title-requests/{id}(id=${request.id})}">
+                <select name="approve"><option value="true">승인</option><option value="false">거절</option></select>
+                <input name="note" maxlength="500" placeholder="검토 메모" required>
+                <button class="button button--primary button--small" type="submit">결정 및 파일 삭제</button>
+            </form>
+        </div>
+    </section>
+
+    <section class="admin-section" id="members">
+        <div class="section-heading section-heading--compact"><div><span class="eyebrow">MEMBERS</span><h2>회원 작성 권한</h2></div></div>
+        <div class="admin-member" th:each="member : ${dashboard.members}">
+            <div class="admin-member__identity">
+                <strong th:text="${member.nickname}">닉네임</strong><span th:text="${member.email ?: '이메일 없음'}">이메일</span>
+                <span th:text="|#${member.id} · ${member.role} · ${member.status}|">상태</span>
+                <span th:if="${member.suspensionReason != null}" th:text="|${member.suspensionReason} · ${member.suspendedUntil ?: '영구'}|">제재</span>
+                <span class="platinum-badge" th:if="${member.badge != null}" th:style="|--badge-color:${member.badge.colorHex}|" th:text="${member.badge.label}">PLATINUM</span>
+            </div>
+            <div class="admin-member__forms" th:if="${member.role.name() != 'ADMIN' and member.status.name() != 'DELETED'}">
+                <form class="admin-action-form" method="post" th:action="@{/admin/members/{id}/sanctions(id=${member.id})}">
+                    <select name="period"><option th:each="period : ${sanctionOptions}" th:value="${period.name()}" th:text="${period.name()}">기간</option></select>
+                    <input name="reason" maxlength="500" placeholder="경고·정지 사유" required>
+                    <button class="button button--danger button--small" type="submit">제재 기록</button>
+                </form>
+                <form method="post" th:if="${member.status.name() == 'SUSPENDED'}" th:action="@{/admin/members/{id}/restore(id=${member.id})}">
+                    <input name="reason" maxlength="500" placeholder="복원 사유" required>
+                    <button class="button button--secondary button--small" type="submit">작성 권한 복원</button>
+                </form>
+                <form method="post" th:if="${member.badge != null}" th:action="@{/admin/members/{id}/badge/revoke(id=${member.id})}">
+                    <input type="hidden" name="version" th:value="${member.badge.version}">
+                    <button class="text-button text-button--danger" type="submit">칭호 회수</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <section class="admin-section" id="history">
+        <div class="section-heading section-heading--compact"><div><span class="eyebrow">AUDIT LOG</span><h2>변경 불가 운영 기록</h2></div></div>
+        <div class="audit-row" th:each="action : ${dashboard.actions}">
+            <strong th:text="${action.actionType}">ACTION</strong>
+            <span th:text="|${action.operatorNickname} → ${action.targetDisplay}|">대상</span>
+            <span th:text="${action.reason}">사유</span><time th:text="${action.createdAt}">일시</time>
+            <details><summary>변경 전·후</summary><pre th:text="|${action.beforeState}\n→\n${action.afterState}|">상태</pre></details>
+        </div>
+        <h3>프로필 공급자 회로</h3>
+        <p th:each="provider : ${profileProviders}" th:text="|${provider.provider} · 실패 ${provider.consecutiveFailures} · 회로 ${provider.circuitOpen ? 'OPEN' : 'CLOSED'}|">상태</p>
+    </section>
+</main>
+<footer th:replace="~{fragments/site :: footer}"></footer>
+</body>
+</html>

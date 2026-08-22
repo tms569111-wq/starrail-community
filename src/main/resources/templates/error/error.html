@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/site :: head('오류 · 붕스청문회')}"></head>
+<body>
+<header th:replace="~{fragments/site :: header}"></header>
+<main class="shell error-page">
+    <span class="error-page__status" th:text="${status}">500</span>
+    <p class="eyebrow" th:text="${code}">ERROR</p>
+    <h1 th:text="${message}">오류가 발생했습니다.</h1>
+    <a class="button button--primary" th:href="@{/}">메인으로 돌아가기</a>
+</main>
+</body>
+</html>
