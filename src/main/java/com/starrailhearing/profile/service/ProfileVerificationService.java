@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 public class ProfileVerificationService {
 
     private static final String UID_PATTERN = "\\d{9}";
+    private static final String REQUIRED_SIGNATURE = "투표!";
 
     private final ProfilePersistenceService persistenceService;
     private final MemberService memberService;
@@ -40,15 +41,15 @@ public class ProfileVerificationService {
         memberService.requireActiveForWrite(memberId);
         String uid = validateUid(rawUid);
         PublicGameProfile publicProfile = profileClient.fetch(uid, false);
+        requireChallengeSignature(publicProfile, REQUIRED_SIGNATURE);
         LocalDateTime now = LocalDateTime.now(clock);
-        String challengeCode = generateChallengeCode();
         LocalDateTime expiresAt = now.plus(properties.mihomo().challengeTtl());
 
         return persistenceService.prepare(
                 memberId,
                 uid,
                 publicProfile,
-                challengeCode,
+                REQUIRED_SIGNATURE,
                 expiresAt
         );
     }
@@ -60,9 +61,7 @@ public class ProfileVerificationService {
                 LocalDateTime.now(clock)
         );
         PublicGameProfile publicProfile = profileClient.fetch(context.uid(), true);
-        if (!publicProfile.signature().contains(context.challengeCode())) {
-            throw new AppException(ErrorCode.PROFILE_SIGNATURE_MISMATCH);
-        }
+        requireChallengeSignature(publicProfile, context.challengeCode());
         requireCharacters(publicProfile);
 
         return persistenceService.completeVerification(
@@ -101,6 +100,13 @@ public class ProfileVerificationService {
         }
     }
 
+    private void requireChallengeSignature(PublicGameProfile publicProfile, String challengeCode) {
+        String signature = publicProfile.signature();
+        if (signature == null || !signature.contains(challengeCode)) {
+            throw new AppException(ErrorCode.PROFILE_SIGNATURE_MISMATCH);
+        }
+    }
+
     private String validateUid(String rawUid) {
         String uid = rawUid == null ? "" : rawUid.trim();
         if (!uid.matches(UID_PATTERN)) {
@@ -109,7 +115,4 @@ public class ProfileVerificationService {
         return uid;
     }
 
-    private String generateChallengeCode() {
-        return "투표!";
-    }
 }
