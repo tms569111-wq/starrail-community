@@ -22,7 +22,10 @@ public enum ErrorCode {
     UID_ALREADY_BOUND(HttpStatus.CONFLICT, "이미 다른 사용자가 인증한 UID입니다."),
     PROFILE_VERIFICATION_REQUIRED(HttpStatus.FORBIDDEN, "먼저 UID 소유 인증을 완료해 주세요."),
     PROFILE_CHALLENGE_EXPIRED(HttpStatus.UNPROCESSABLE_CONTENT, "인증문구의 유효 시간이 지났습니다."),
-    PROFILE_SIGNATURE_MISMATCH(HttpStatus.UNPROCESSABLE_CONTENT, "프로필 소개에서 인증문구를 찾지 못했습니다."),
+    PROFILE_SIGNATURE_MISMATCH(
+            HttpStatus.UNPROCESSABLE_CONTENT,
+            "게임 프로필 소개에 '투표!'가 포함되어 있지 않습니다. 소개문을 저장한 뒤 다시 시도해 주세요."
+    ),
     PROFILE_LOOKUP_FAILED(HttpStatus.NOT_FOUND, "UID를 조회하지 못했습니다. UID를 확인하고 잠시 후 다시 시도해 주세요."),
     PROFILE_NOT_PUBLIC(HttpStatus.UNPROCESSABLE_CONTENT, "UID는 확인했지만 전시 캐릭터를 불러오지 못했습니다. 게임에서 캐릭터 상세 정보 표시를 켜고 전시 캐릭터를 등록해 주세요."),
     CHARACTER_NOT_VERIFIED(HttpStatus.FORBIDDEN, "보유 인증된 캐릭터만 참여할 수 있습니다."),

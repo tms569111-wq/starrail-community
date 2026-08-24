@@ -42,7 +42,7 @@ public class ProfileController {
             var challenge = profileService.prepare(currentMemberProvider.requireCurrentMemberId(), uid);
             redirect.addFlashAttribute(
                     "successMessage",
-                    challenge.nickname() + " 프로필을 찾았습니다. 인증문구를 소개에 넣어 주세요."
+                    challenge.nickname() + " 프로필에서 인증문구를 확인했습니다. 아래에서 인증을 완료해 주세요."
             );
         } catch (AppException exception) {
             redirect.addFlashAttribute("errorMessage", exception.getMessage());
