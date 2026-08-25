@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    restart: unless-stopped
     environment:
       DB_URL: jdbc:mysql://db:3306/starrail_hearing?serverTimezone=UTC&characterEncoding=UTF-8
       DB_USERNAME: "${DB_USERNAME:-oracle_app}"
@@ -12,14 +13,21 @@ services:
       APP_PLATINUM_LABEL: "${APP_PLATINUM_LABEL:-이상중재 PLATINUM}"
       APP_PLATINUM_COLOR: "${APP_PLATINUM_COLOR:-#8DE9FF}"
       MIHOMO_USER_AGENT: "${MIHOMO_USER_AGENT:-StarrailHearing/0.1}"
+      TITLE_PRIVATE_UPLOAD_DIR: /app/private-uploads/title-verification
+      SPRING_THYMELEAF_CACHE: "${SPRING_THYMELEAF_CACHE:-true}"
+      SERVER_FORWARD_HEADERS_STRATEGY: "${SERVER_FORWARD_HEADERS_STRATEGY:-none}"
+      SERVER_SERVLET_SESSION_COOKIE_SECURE: "${SERVER_SERVLET_SESSION_COOKIE_SECURE:-false}"
     ports:
       - "8080:8080"
+    volumes:
+      - title-uploads:/app/private-uploads/title-verification
     depends_on:
       db:
         condition: service_healthy
 
   db:
     image: mysql:8.4
+    restart: unless-stopped
     environment:
       MYSQL_DATABASE: starrail_hearing
       MYSQL_USER: "${DB_USERNAME:-oracle_app}"
@@ -37,3 +45,4 @@ services:
 
 volumes:
   mysql-data:
+  title-uploads:
