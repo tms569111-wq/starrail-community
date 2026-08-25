@@ -88,10 +88,10 @@ class VoteServiceTest {
         when(aggregate.getTierLabel()).thenReturn("T0.5");
         when(aggregate.getVoteCount()).thenReturn(32L);
         when(aggregate.isSampleSufficient()).thenReturn(true);
-        when(aggregateRepository.findAllByEvaluation_Version_IdAndFilterCode(44L, "ALL"))
+        when(aggregateRepository.findAllByEvaluation_Version_IdAndFilterCode(44L, "E1"))
                 .thenReturn(List.of(aggregate));
 
-        List<TierBoardRowView> rows = service.tierBoard(List.of(ranked, pending));
+        List<TierBoardRowView> rows = service.tierBoard(List.of(ranked, pending), EidolonFilter.E1);
 
         assertThat(rows)
                 .extracting(TierBoardRowView::label)

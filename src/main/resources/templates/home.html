@@ -39,12 +39,20 @@
         <div class="section-heading">
             <div>
                 <span class="eyebrow">COMMUNITY TIER BOARD</span>
-                <h2>전체 캐릭터 티어표</h2>
+                <h2 th:text="|${selectedEidolonFilter.label} 캐릭터 티어표|">전체 캐릭터 티어표</h2>
             </div>
             <p><strong th:text="${characterCount}">0</strong>명의 검색 결과</p>
         </div>
 
+        <nav class="eidolon-tabs" aria-label="성혼 단계별 티어표 필터">
+            <a th:each="item : ${eidolonFilters}"
+               th:href="@{/(q=${keyword},element=${selectedElement},path=${selectedPath},filter=${item.name()})} + '#characters'"
+               th:classappend="${selectedEidolonFilter == item} ? ' is-active'"
+               th:text="${item.label}">전체</a>
+        </nav>
+
         <form class="filter-bar" method="get" th:action="@{/}">
+            <input type="hidden" name="filter" th:value="${selectedEidolonFilter.name()}">
             <label class="search-field">
                 <span class="sr-only">캐릭터 검색</span>
                 <input type="search" name="q" th:value="${keyword}" placeholder="캐릭터 이름 검색">

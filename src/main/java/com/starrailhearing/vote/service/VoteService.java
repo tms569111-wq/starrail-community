@@ -149,11 +149,12 @@ public class VoteService {
         );
     }
 
-    public List<CharacterCardView> cards(List<GameCharacter> characters) {
+    public List<CharacterCardView> cards(List<GameCharacter> characters, EidolonFilter filter) {
+        EidolonFilter selectedFilter = filter == null ? EidolonFilter.ALL : filter;
         Map<Long, TierAggregate> aggregates = new HashMap<>();
         versionRepository.findFirstByStatusOrderByOpenedAtDesc(VersionStatus.OPEN)
                 .ifPresent(version -> aggregateRepository
-                        .findAllByEvaluation_Version_IdAndFilterCode(version.getId(), EidolonFilter.ALL.name())
+                        .findAllByEvaluation_Version_IdAndFilterCode(version.getId(), selectedFilter.name())
                         .forEach(value -> aggregates.put(value.getEvaluation().getCharacter().getId(), value)));
 
         return characters.stream()
@@ -178,10 +179,10 @@ public class VoteService {
                 .toList();
     }
 
-    public List<TierBoardRowView> tierBoard(List<GameCharacter> characters) {
+    public List<TierBoardRowView> tierBoard(List<GameCharacter> characters, EidolonFilter filter) {
         Map<String, List<CharacterCardView>> grouped = new HashMap<>();
         TIER_BOARD.forEach(tier -> grouped.put(tier.key(), new ArrayList<>()));
-        cards(characters).forEach(card -> grouped.get(tierKey(card.tier())).add(card));
+        cards(characters, filter).forEach(card -> grouped.get(tierKey(card.tier())).add(card));
 
         return TIER_BOARD.stream()
                 .map(tier -> new TierBoardRowView(

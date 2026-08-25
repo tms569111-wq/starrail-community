@@ -2,11 +2,11 @@ package com.starrailhearing.vote.service;
 
 public enum EidolonFilter {
     ALL("전체", null, null),
-    E0("E0", 0, 0),
-    E1("E1", 1, 1),
-    E2("E2", 2, 2),
-    E3_TO_E5("E3~E5", 3, 5),
-    E6("E6", 6, 6);
+    E0("0돌", 0, 0),
+    E1("1돌", 1, 1),
+    E2("2돌", 2, 2),
+    E3_TO_E5("3~5돌", 3, 5),
+    E6("풀돌", 6, 6);
 
     private final String label;
     private final Integer minimum;

@@ -21,7 +21,9 @@
             <p th:text="${member.email ?: 'Google 이메일 비공개'}">이메일</p>
             <div class="account-status-row">
                 <span th:text="${member.role}">USER</span>
-                <span th:text="${member.status}">ACTIVE</span>
+                <span th:if="${member.status.name() == 'ACTIVE'}">활성</span>
+                <span class="blocked-status" th:if="${member.status.name() == 'SUSPENDED'}">차단됨</span>
+                <span th:if="${member.status.name() == 'DELETED'}">탈퇴</span>
             </div>
             <form class="stack-form" method="post" th:if="${member.status.name() == 'ACTIVE'}" th:action="@{/me/account/nickname}">
                 <label>사이트 표시 닉네임

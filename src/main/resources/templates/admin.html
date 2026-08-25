@@ -20,7 +20,7 @@
     <section class="admin-stats">
         <div><strong th:text="${dashboard.summary.totalMembers}">0</strong><span>전체 회원</span></div>
         <div><strong th:text="${dashboard.summary.activeMembers}">0</strong><span>활성 회원</span></div>
-        <div><strong th:text="${dashboard.summary.suspendedMembers}">0</strong><span>작성 정지</span></div>
+        <div><strong th:text="${dashboard.summary.suspendedMembers}">0</strong><span>차단 회원</span></div>
         <div><strong th:text="${dashboard.summary.joinedThisMonth}">0</strong><span>이번 달 가입</span></div>
         <div><strong th:text="${dashboard.summary.deletedThisMonth}">0</strong><span>이번 달 탈퇴</span></div>
         <div><strong th:text="${dashboard.summary.pendingReports}">0</strong><span>대기 신고</span></div>
@@ -142,7 +142,8 @@
         <div class="admin-member" th:each="member : ${dashboard.members}">
             <div class="admin-member__identity">
                 <strong th:text="${member.nickname}">닉네임</strong><span th:text="${member.email ?: '이메일 없음'}">이메일</span>
-                <span th:text="|#${member.id} · ${member.role} · ${member.status}|">상태</span>
+                <span th:if="${member.status.name() != 'SUSPENDED'}" th:text="|#${member.id} · ${member.role} · ${member.status}|">상태</span>
+                <span class="blocked-status" th:if="${member.status.name() == 'SUSPENDED'}" th:text="|#${member.id} · ${member.role} · 차단됨|">차단됨</span>
                 <span th:if="${member.suspensionReason != null}" th:text="|${member.suspensionReason} · ${member.suspendedUntil ?: '영구'}|">제재</span>
                 <span class="platinum-badge" th:if="${member.badge != null}" th:style="|--badge-color:${member.badge.colorHex}|" th:text="${member.badge.label}">PLATINUM</span>
             </div>
