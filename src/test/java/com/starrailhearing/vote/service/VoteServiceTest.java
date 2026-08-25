@@ -6,14 +6,14 @@ import com.starrailhearing.common.exception.ErrorCode;
 import com.starrailhearing.evaluation.domain.CharacterEvaluation;
 import com.starrailhearing.evaluation.domain.GameVersion;
 import com.starrailhearing.evaluation.domain.VersionStatus;
-import com.starrailhearing.evaluation.repository.OpenEvaluationReader;
+import com.starrailhearing.evaluation.repository.EvaluationReader;
 import com.starrailhearing.evaluation.repository.PollOptionRepository;
 import com.starrailhearing.member.domain.MemberAccount;
 import com.starrailhearing.member.service.MemberService;
+import com.starrailhearing.profile.domain.VerifiedCharacter;
 import com.starrailhearing.profile.repository.VerifiedCharacterRepository;
 import com.starrailhearing.vote.repository.CharacterVoteRepository;
 import com.starrailhearing.vote.repository.TierAggregateRepository;
-import com.starrailhearing.evaluation.repository.GameVersionRepository;
 import com.starrailhearing.vote.domain.TierAggregate;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -33,7 +33,7 @@ class VoteServiceTest {
     void 보유_인증되지_않은_캐릭터에는_투표할_수_없다() {
         MemberService memberService = mock(MemberService.class);
         VerifiedCharacterRepository verifiedRepository = mock(VerifiedCharacterRepository.class);
-        OpenEvaluationReader evaluationReader = mock(OpenEvaluationReader.class);
+        EvaluationReader evaluationReader = mock(EvaluationReader.class);
         PollOptionRepository optionRepository = mock(PollOptionRepository.class);
         CharacterVoteRepository voteRepository = mock(CharacterVoteRepository.class);
         VoteService service = new VoteService(
@@ -43,16 +43,16 @@ class VoteServiceTest {
                 optionRepository,
                 voteRepository,
                 mock(TierAggregateRepository.class),
-                mock(GameVersionRepository.class),
                 mock(ObjectMapper.class)
         );
         GameCharacter character = mock(GameCharacter.class);
+        GameVersion version = mock(GameVersion.class);
         when(character.getId()).thenReturn(10L);
         when(memberService.requireActiveForWrite(1L)).thenReturn(mock(MemberAccount.class));
         when(verifiedRepository.findByProfile_Member_IdAndCharacter_Id(1L, 10L))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.submit(1L, character, 100L))
+        assertThatThrownBy(() -> service.submit(1L, character, version, 100L))
                 .isInstanceOfSatisfying(AppException.class, exception ->
                         assertThat(exception.getErrorCode())
                                 .isEqualTo(ErrorCode.CHARACTER_NOT_VERIFIED)
@@ -61,25 +61,56 @@ class VoteServiceTest {
     }
 
     @Test
+    void 종료된_버전에는_직접_요청해도_투표할_수_없다() {
+        MemberService memberService = mock(MemberService.class);
+        VerifiedCharacterRepository verifiedRepository = mock(VerifiedCharacterRepository.class);
+        EvaluationReader evaluationReader = mock(EvaluationReader.class);
+        PollOptionRepository optionRepository = mock(PollOptionRepository.class);
+        CharacterVoteRepository voteRepository = mock(CharacterVoteRepository.class);
+        VoteService service = new VoteService(
+                memberService,
+                verifiedRepository,
+                evaluationReader,
+                optionRepository,
+                voteRepository,
+                mock(TierAggregateRepository.class),
+                mock(ObjectMapper.class)
+        );
+        GameCharacter character = mock(GameCharacter.class);
+        GameVersion version = mock(GameVersion.class);
+        CharacterEvaluation evaluation = mock(CharacterEvaluation.class);
+        when(character.getId()).thenReturn(10L);
+        when(version.getId()).thenReturn(44L);
+        when(version.getStatus()).thenReturn(VersionStatus.CLOSED);
+        when(memberService.requireActiveForWrite(1L)).thenReturn(mock(MemberAccount.class));
+        when(verifiedRepository.findByProfile_Member_IdAndCharacter_Id(1L, 10L))
+                .thenReturn(Optional.of(mock(VerifiedCharacter.class)));
+        when(evaluationReader.requireEvaluation(10L, 44L)).thenReturn(evaluation);
+
+        assertThatThrownBy(() -> service.submit(1L, character, version, 100L))
+                .isInstanceOfSatisfying(AppException.class, exception ->
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(ErrorCode.VERSION_STATE_CONFLICT)
+                );
+        verifyNoInteractions(optionRepository, voteRepository);
+    }
+
+    @Test
     void 홈_티어보드는_집계_티어별_고정_행으로_캐릭터를_묶는다() {
         TierAggregateRepository aggregateRepository = mock(TierAggregateRepository.class);
-        GameVersionRepository versionRepository = mock(GameVersionRepository.class);
         VoteService service = new VoteService(
                 mock(MemberService.class),
                 mock(VerifiedCharacterRepository.class),
-                mock(OpenEvaluationReader.class),
+                mock(EvaluationReader.class),
                 mock(PollOptionRepository.class),
                 mock(CharacterVoteRepository.class),
                 aggregateRepository,
-                versionRepository,
                 mock(ObjectMapper.class)
         );
         GameCharacter ranked = character(10L, "ranked", "집계 캐릭터");
         GameCharacter pending = character(20L, "pending", "대기 캐릭터");
         GameVersion version = mock(GameVersion.class);
         when(version.getId()).thenReturn(44L);
-        when(versionRepository.findFirstByStatusOrderByOpenedAtDesc(VersionStatus.OPEN))
-                .thenReturn(Optional.of(version));
 
         CharacterEvaluation evaluation = mock(CharacterEvaluation.class);
         when(evaluation.getCharacter()).thenReturn(ranked);
@@ -91,7 +122,9 @@ class VoteServiceTest {
         when(aggregateRepository.findAllByEvaluation_Version_IdAndFilterCode(44L, "E1"))
                 .thenReturn(List.of(aggregate));
 
-        List<TierBoardRowView> rows = service.tierBoard(List.of(ranked, pending), EidolonFilter.E1);
+        List<TierBoardRowView> rows = service.tierBoard(
+                List.of(ranked, pending), version, EidolonFilter.E1
+        );
 
         assertThat(rows)
                 .extracting(TierBoardRowView::label)

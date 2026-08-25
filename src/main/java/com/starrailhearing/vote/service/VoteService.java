@@ -4,9 +4,10 @@ import com.starrailhearing.character.domain.GameCharacter;
 import com.starrailhearing.common.exception.AppException;
 import com.starrailhearing.common.exception.ErrorCode;
 import com.starrailhearing.evaluation.domain.CharacterEvaluation;
+import com.starrailhearing.evaluation.domain.GameVersion;
 import com.starrailhearing.evaluation.domain.Poll;
 import com.starrailhearing.evaluation.domain.PollOption;
-import com.starrailhearing.evaluation.repository.OpenEvaluationReader;
+import com.starrailhearing.evaluation.repository.EvaluationReader;
 import com.starrailhearing.evaluation.repository.PollOptionRepository;
 import com.starrailhearing.member.domain.MemberAccount;
 import com.starrailhearing.member.service.MemberService;
@@ -16,7 +17,6 @@ import com.starrailhearing.vote.repository.CharacterVoteRepository;
 import com.starrailhearing.vote.repository.TierAggregateRepository;
 import com.starrailhearing.vote.domain.TierAggregate;
 import com.starrailhearing.evaluation.domain.VersionStatus;
-import com.starrailhearing.evaluation.repository.GameVersionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,21 +41,19 @@ public class VoteService {
 
     private final MemberService memberService;
     private final VerifiedCharacterRepository verifiedCharacterRepository;
-    private final OpenEvaluationReader evaluationReader;
+    private final EvaluationReader evaluationReader;
     private final PollOptionRepository optionRepository;
     private final CharacterVoteRepository voteRepository;
     private final TierAggregateRepository aggregateRepository;
-    private final GameVersionRepository versionRepository;
     private final ObjectMapper objectMapper;
 
     public VoteService(
             MemberService memberService,
             VerifiedCharacterRepository verifiedCharacterRepository,
-            OpenEvaluationReader evaluationReader,
+            EvaluationReader evaluationReader,
             PollOptionRepository optionRepository,
             CharacterVoteRepository voteRepository,
             TierAggregateRepository aggregateRepository,
-            GameVersionRepository versionRepository,
             ObjectMapper objectMapper
     ) {
         this.memberService = memberService;
@@ -64,18 +62,24 @@ public class VoteService {
         this.optionRepository = optionRepository;
         this.voteRepository = voteRepository;
         this.aggregateRepository = aggregateRepository;
-        this.versionRepository = versionRepository;
         this.objectMapper = objectMapper;
     }
 
     @Transactional
-    public VoteSubmitResult submit(long memberId, GameCharacter character, long optionId) {
+    public VoteSubmitResult submit(
+            long memberId,
+            GameCharacter character,
+            GameVersion version,
+            long optionId
+    ) {
         memberService.requireActiveForWrite(memberId);
         VerifiedCharacter verified = verifiedCharacterRepository
                 .findByProfile_Member_IdAndCharacter_Id(memberId, character.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.CHARACTER_NOT_VERIFIED));
-        CharacterEvaluation evaluation = evaluationReader.requireEvaluation(character.getId());
-        if (evaluation.getVersion().getStatus() != VersionStatus.OPEN) {
+        CharacterEvaluation evaluation = evaluationReader.requireEvaluation(
+                character.getId(), version.getId()
+        );
+        if (version.getStatus() != VersionStatus.OPEN) {
             throw new AppException(ErrorCode.VERSION_STATE_CONFLICT, "투표가 마감된 버전입니다.");
         }
         Poll poll = evaluationReader.requireTierPoll(evaluation);
@@ -95,8 +99,15 @@ public class VoteService {
         );
     }
 
-    public TierPollView view(Long memberId, GameCharacter character, EidolonFilter filter) {
-        CharacterEvaluation evaluation = evaluationReader.requireEvaluation(character.getId());
+    public TierPollView view(
+            Long memberId,
+            GameCharacter character,
+            GameVersion version,
+            EidolonFilter filter
+    ) {
+        CharacterEvaluation evaluation = evaluationReader.requireEvaluation(
+                character.getId(), version.getId()
+        );
         Poll poll = evaluationReader.requireTierPoll(evaluation);
         List<PollOption> options = optionRepository.findByPoll_IdOrderByDisplayOrderAsc(poll.getId());
 
@@ -149,13 +160,22 @@ public class VoteService {
         );
     }
 
-    public List<CharacterCardView> cards(List<GameCharacter> characters, EidolonFilter filter) {
+    public List<CharacterCardView> cards(
+            List<GameCharacter> characters,
+            GameVersion version,
+            EidolonFilter filter
+    ) {
         EidolonFilter selectedFilter = filter == null ? EidolonFilter.ALL : filter;
         Map<Long, TierAggregate> aggregates = new HashMap<>();
-        versionRepository.findFirstByStatusOrderByOpenedAtDesc(VersionStatus.OPEN)
-                .ifPresent(version -> aggregateRepository
-                        .findAllByEvaluation_Version_IdAndFilterCode(version.getId(), selectedFilter.name())
-                        .forEach(value -> aggregates.put(value.getEvaluation().getCharacter().getId(), value)));
+        if (version != null) {
+            aggregateRepository
+                    .findAllByEvaluation_Version_IdAndFilterCode(
+                            version.getId(), selectedFilter.name()
+                    )
+                    .forEach(value -> aggregates.put(
+                            value.getEvaluation().getCharacter().getId(), value
+                    ));
+        }
 
         return characters.stream()
                 .map(character -> {
@@ -179,10 +199,15 @@ public class VoteService {
                 .toList();
     }
 
-    public List<TierBoardRowView> tierBoard(List<GameCharacter> characters, EidolonFilter filter) {
+    public List<TierBoardRowView> tierBoard(
+            List<GameCharacter> characters,
+            GameVersion version,
+            EidolonFilter filter
+    ) {
         Map<String, List<CharacterCardView>> grouped = new HashMap<>();
         TIER_BOARD.forEach(tier -> grouped.put(tier.key(), new ArrayList<>()));
-        cards(characters, filter).forEach(card -> grouped.get(tierKey(card.tier())).add(card));
+        cards(characters, version, filter)
+                .forEach(card -> grouped.get(tierKey(card.tier())).add(card));
 
         return TIER_BOARD.stream()
                 .map(tier -> new TierBoardRowView(
@@ -192,12 +217,6 @@ public class VoteService {
                         List.copyOf(grouped.get(tier.key()))
                 ))
                 .toList();
-    }
-
-    public String currentVersionCode() {
-        return versionRepository.findFirstByStatusOrderByOpenedAtDesc(VersionStatus.OPEN)
-                .map(version -> version.getVersionCode())
-                .orElse("종료됨");
     }
 
     @SuppressWarnings("unchecked")

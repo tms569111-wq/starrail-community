@@ -3,6 +3,8 @@ package com.starrailhearing.web;
 import com.starrailhearing.character.domain.GameCharacter;
 import com.starrailhearing.character.service.CharacterService;
 import com.starrailhearing.common.exception.AppException;
+import com.starrailhearing.evaluation.domain.GameVersion;
+import com.starrailhearing.evaluation.service.VersionBrowseService;
 import com.starrailhearing.member.service.CurrentMemberProvider;
 import com.starrailhearing.comment.service.CommentSort;
 import com.starrailhearing.vote.service.EidolonFilter;
@@ -20,30 +22,42 @@ public class VoteController {
     private final CharacterService characterService;
     private final VoteService voteService;
     private final CurrentMemberProvider currentMemberProvider;
+    private final VersionBrowseService versionBrowseService;
 
     public VoteController(
             CharacterService characterService,
             VoteService voteService,
-            CurrentMemberProvider currentMemberProvider
+            CurrentMemberProvider currentMemberProvider,
+            VersionBrowseService versionBrowseService
     ) {
         this.characterService = characterService;
         this.voteService = voteService;
         this.currentMemberProvider = currentMemberProvider;
+        this.versionBrowseService = versionBrowseService;
     }
 
     @PostMapping("/characters/{slug}/votes")
     public String vote(
             @PathVariable String slug,
             @RequestParam long optionId,
+            @RequestParam(name = "version", required = false) String version,
             @RequestParam(name = "filter", required = false) String filter,
             @RequestParam(name = "sort", required = false) String sort,
             RedirectAttributes redirect
     ) {
         EidolonFilter redirectFilter = EidolonFilter.from(filter);
+        String redirectVersion = null;
         try {
-            GameCharacter character = characterService.requireActive(slug);
+            GameVersion selectedVersion = versionBrowseService.requireSelected(version);
+            redirectVersion = selectedVersion.getVersionCode();
+            GameCharacter character = characterService.requireActiveForVersion(
+                    slug, selectedVersion.getId()
+            );
             VoteSubmitResult result = voteService.submit(
-                    currentMemberProvider.requireCurrentMemberId(), character, optionId
+                    currentMemberProvider.requireCurrentMemberId(),
+                    character,
+                    selectedVersion,
+                    optionId
             );
             redirectFilter = result.countedIn();
             redirect.addFlashAttribute(
@@ -54,7 +68,8 @@ public class VoteController {
             redirect.addFlashAttribute("errorMessage", exception.getMessage());
         }
         return "redirect:/characters/" + slug
-                + "?filter=" + redirectFilter.name()
+                + (redirectVersion == null ? "?" : "?version=" + redirectVersion + "&")
+                + "filter=" + redirectFilter.name()
                 + "&sort=" + CommentSort.from(sort).name();
     }
 }

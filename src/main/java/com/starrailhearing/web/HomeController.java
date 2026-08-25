@@ -2,6 +2,9 @@ package com.starrailhearing.web;
 
 import com.starrailhearing.character.domain.GameCharacter;
 import com.starrailhearing.character.service.CharacterService;
+import com.starrailhearing.evaluation.domain.GameVersion;
+import com.starrailhearing.evaluation.domain.VersionStatus;
+import com.starrailhearing.evaluation.service.VersionBrowseService;
 import com.starrailhearing.vote.service.EidolonFilter;
 import com.starrailhearing.vote.service.VoteService;
 import org.springframework.stereotype.Controller;
@@ -40,10 +43,16 @@ public class HomeController {
 
     private final CharacterService characterService;
     private final VoteService voteService;
+    private final VersionBrowseService versionBrowseService;
 
-    public HomeController(CharacterService characterService, VoteService voteService) {
+    public HomeController(
+            CharacterService characterService,
+            VoteService voteService,
+            VersionBrowseService versionBrowseService
+    ) {
         this.characterService = characterService;
         this.voteService = voteService;
+        this.versionBrowseService = versionBrowseService;
     }
 
     @GetMapping("/")
@@ -52,12 +61,16 @@ public class HomeController {
             @RequestParam(name = "element", required = false) String element,
             @RequestParam(name = "path", required = false) String path,
             @RequestParam(name = "filter", required = false) String filterValue,
+            @RequestParam(name = "version", required = false) String versionValue,
             @RequestParam(name = "withdrawn", required = false) String withdrawn,
             Model model
     ) {
         EidolonFilter filter = EidolonFilter.from(filterValue);
-        List<GameCharacter> characters = characterService.search(keyword, element, path);
-        model.addAttribute("tierRows", voteService.tierBoard(characters, filter));
+        GameVersion version = versionBrowseService.findSelected(versionValue).orElse(null);
+        List<GameCharacter> characters = version == null
+                ? characterService.search(keyword, element, path)
+                : characterService.searchByVersion(version.getId(), keyword, element, path);
+        model.addAttribute("tierRows", voteService.tierBoard(characters, version, filter));
         model.addAttribute("characterCount", characters.size());
         model.addAttribute("keyword", keyword == null ? "" : keyword);
         model.addAttribute("selectedElement", element == null ? "" : element);
@@ -66,8 +79,12 @@ public class HomeController {
         model.addAttribute("paths", PATHS);
         model.addAttribute("eidolonFilters", EidolonFilter.values());
         model.addAttribute("selectedEidolonFilter", filter);
+        model.addAttribute("versions", versionBrowseService.options());
+        model.addAttribute("selectedVersionCode", version == null ? "" : version.getVersionCode());
+        model.addAttribute("selectedVersionOpen", version != null
+                && version.getStatus() == VersionStatus.OPEN);
         model.addAttribute("heroCharacter", characters.isEmpty() ? null : characters.get(0));
-        model.addAttribute("currentVersion", voteService.currentVersionCode());
+        model.addAttribute("currentVersion", version == null ? "준비 중" : version.getVersionCode());
         model.addAttribute("withdrawn", withdrawn != null);
         return "home";
     }

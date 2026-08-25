@@ -24,8 +24,27 @@ public class CharacterService {
         return repository.search(normalize(keyword), normalize(element), normalize(path));
     }
 
+    public List<GameCharacter> searchByVersion(
+            long versionId,
+            String keyword,
+            String element,
+            String path
+    ) {
+        return repository.searchByVersion(
+                versionId,
+                normalize(keyword),
+                normalize(element),
+                normalize(path)
+        );
+    }
+
     public GameCharacter requireActive(String slug) {
         return repository.findBySlugAndStatus(slug, CharacterStatus.ACTIVE)
+                .orElseThrow(() -> new AppException(ErrorCode.CHARACTER_NOT_FOUND));
+    }
+
+    public GameCharacter requireActiveForVersion(String slug, long versionId) {
+        return repository.findActiveBySlugAndVersion(slug, versionId)
                 .orElseThrow(() -> new AppException(ErrorCode.CHARACTER_NOT_FOUND));
     }
 
