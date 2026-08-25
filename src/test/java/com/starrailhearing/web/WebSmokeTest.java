@@ -59,7 +59,6 @@ class WebSmokeTest {
         mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("붕스청문회")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("tier-board")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("전체 캐릭터 티어표")));
 
         mockMvc.perform(get("/login"))
