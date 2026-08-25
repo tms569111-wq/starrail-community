@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public class ProfileVerificationService {
 
     private static final String UID_PATTERN = "\\d{9}";
-    private static final String REQUIRED_SIGNATURE = "투표!";
+    private static final String VERIFICATION_STATE_TOKEN = "PROFILE_VERIFICATION";
 
     private final ProfilePersistenceService persistenceService;
     private final MemberService memberService;
@@ -41,7 +41,6 @@ public class ProfileVerificationService {
         memberService.requireActiveForWrite(memberId);
         String uid = validateUid(rawUid);
         PublicGameProfile publicProfile = profileClient.fetch(uid, false);
-        requireChallengeSignature(publicProfile, REQUIRED_SIGNATURE);
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime expiresAt = now.plus(properties.mihomo().challengeTtl());
 
@@ -49,7 +48,7 @@ public class ProfileVerificationService {
                 memberId,
                 uid,
                 publicProfile,
-                REQUIRED_SIGNATURE,
+                VERIFICATION_STATE_TOKEN,
                 expiresAt
         );
     }
@@ -61,7 +60,6 @@ public class ProfileVerificationService {
                 LocalDateTime.now(clock)
         );
         PublicGameProfile publicProfile = profileClient.fetch(context.uid(), true);
-        requireChallengeSignature(publicProfile, context.challengeCode());
         requireCharacters(publicProfile);
 
         return persistenceService.completeVerification(
@@ -97,13 +95,6 @@ public class ProfileVerificationService {
     private void requireCharacters(PublicGameProfile publicProfile) {
         if (!publicProfile.displayEnabled() || publicProfile.characters().isEmpty()) {
             throw new AppException(ErrorCode.PROFILE_NOT_PUBLIC);
-        }
-    }
-
-    private void requireChallengeSignature(PublicGameProfile publicProfile, String challengeCode) {
-        String signature = publicProfile.signature();
-        if (signature == null || !signature.contains(challengeCode)) {
-            throw new AppException(ErrorCode.PROFILE_SIGNATURE_MISMATCH);
         }
     }
 

@@ -10,30 +10,17 @@
     <div class="page-title">
         <span class="eyebrow">MY STAR RAIL PROFILE</span>
         <h1>내 캐릭터 인증</h1>
-        <p>먼저 게임 소개문을 바꾼 뒤 UID 소유자임을 확인하고, 전시 캐릭터를 누적합니다.</p>
+        <p>UID로 공개 프로필을 확인하고, 전시 캐릭터를 누적합니다.</p>
     </div>
 
     <div class="flash flash--success" th:if="${successMessage}" th:text="${successMessage}"></div>
     <div class="flash flash--error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
-    <section class="profile-panel profile-panel--intro" th:if="${!profile.exists}">
-        <div class="step-number">01</div>
-        <div class="profile-panel__content">
-            <h2>먼저 게임 소개문을 바꿔 주세요</h2>
-            <p>게임을 켜고 휴대폰 메뉴 → 프로필 → 소개 수정에서 아래 문구를 저장합니다.</p>
-            <div class="challenge-code">
-                <code id="challengeCodeBeforeUid">투표!</code>
-                <button class="icon-button" type="button" data-copy-target="challengeCodeBeforeUid">복사</button>
-            </div>
-            <p>소개문을 저장한 뒤 아래에서 UID를 입력해 주세요.</p>
-        </div>
-    </section>
-
     <section class="profile-panel" th:if="${!profile.exists}">
-        <div class="step-number">02</div>
+        <div class="step-number">01</div>
         <div>
             <h2>게임 UID 입력</h2>
-            <p>공개 프로필에서 닉네임과 소개문 <strong>투표!</strong>를 확인합니다. UID는 숫자 9자리입니다.</p>
+            <p>공개 프로필의 닉네임과 UID를 확인합니다. UID는 숫자 9자리입니다.</p>
             <form class="uid-form" th:if="${currentUser.canWrite}" method="post" th:action="@{/me/profile/challenge}">
                 <input type="text" name="uid" inputmode="numeric" pattern="[0-9]{9}" maxlength="9"
                        placeholder="예: 800000000" required>
@@ -44,7 +31,7 @@
 
     <section class="profile-panel profile-panel--pending"
              th:if="${profile.exists and profile.status.name() == 'PENDING'}">
-        <div class="step-number">03</div>
+        <div class="step-number">02</div>
         <div class="profile-panel__content">
             <div class="profile-summary">
                 <div>
@@ -56,18 +43,14 @@
                     <strong th:text="${profile.uid}">000000000</strong>
                 </div>
             </div>
-            <h2>게임 소개문을 마지막으로 확인해 주세요</h2>
-            <div class="challenge-code">
-                <code id="challengeCode" th:text="${profile.challengeCode}">HSRH-ABC123</code>
-                <button class="icon-button" type="button" data-copy-target="challengeCode">복사</button>
-            </div>
+            <h2>전시 캐릭터를 확인해 주세요</h2>
             <ol class="instruction-list">
-                <li>게임 소개문에 위 인증문구가 저장되어 있는지 확인</li>
+                <li>UID와 닉네임이 본인 계정과 일치하는지 확인</li>
                 <li>전시 캐릭터와 지원 캐릭터를 공개 상태로 설정</li>
                 <li>아래 버튼을 눌러 인증과 캐릭터 등록 완료</li>
             </ol>
             <form method="post" th:if="${currentUser.canWrite}" th:action="@{/me/profile/verify}">
-                <button class="button button--primary" type="submit">인증문구 확인</button>
+                <button class="button button--primary" type="submit">캐릭터 인증 완료</button>
             </form>
         </div>
     </section>
