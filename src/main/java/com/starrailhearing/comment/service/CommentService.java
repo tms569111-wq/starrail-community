@@ -8,8 +8,9 @@ import com.starrailhearing.comment.repository.CommentLikeRepository;
 import com.starrailhearing.common.exception.AppException;
 import com.starrailhearing.common.exception.ErrorCode;
 import com.starrailhearing.evaluation.domain.CharacterEvaluation;
+import com.starrailhearing.evaluation.domain.GameVersion;
 import com.starrailhearing.evaluation.domain.VersionStatus;
-import com.starrailhearing.evaluation.repository.OpenEvaluationReader;
+import com.starrailhearing.evaluation.repository.EvaluationReader;
 import com.starrailhearing.member.domain.MemberAccount;
 import com.starrailhearing.member.service.BadgeService;
 import com.starrailhearing.member.service.BadgeView;
@@ -40,7 +41,7 @@ public class CommentService {
 
     private final MemberService memberService;
     private final VerifiedCharacterRepository verifiedCharacterRepository;
-    private final OpenEvaluationReader evaluationReader;
+    private final EvaluationReader evaluationReader;
     private final CharacterCommentRepository commentRepository;
     private final CommentLikeRepository likeRepository;
     private final BadgeService badgeService;
@@ -49,7 +50,7 @@ public class CommentService {
     public CommentService(
             MemberService memberService,
             VerifiedCharacterRepository verifiedCharacterRepository,
-            OpenEvaluationReader evaluationReader,
+            EvaluationReader evaluationReader,
             CharacterCommentRepository commentRepository,
             CommentLikeRepository likeRepository,
             BadgeService badgeService,
@@ -65,10 +66,17 @@ public class CommentService {
     }
 
     @Transactional
-    public EidolonFilter create(long memberId, GameCharacter character, String content) {
+    public EidolonFilter create(
+            long memberId,
+            GameCharacter character,
+            GameVersion version,
+            String content
+    ) {
         MemberAccount member = memberService.requireActiveForWriteLocked(memberId);
         VerifiedCharacter verified = requireVerified(memberId, character.getId());
-        CharacterEvaluation evaluation = evaluationReader.requireEvaluation(character.getId());
+        CharacterEvaluation evaluation = evaluationReader.requireEvaluation(
+                character.getId(), version.getId()
+        );
         requireOpenVersion(evaluation);
         requireWriteInterval(memberId, evaluation.getId());
         save(() -> new CharacterComment(member, evaluation, verified, content));
@@ -79,15 +87,17 @@ public class CommentService {
     public EidolonFilter createReply(
             long memberId,
             GameCharacter character,
+            GameVersion version,
             long parentId,
             String content
     ) {
         MemberAccount member = memberService.requireActiveForWriteLocked(memberId);
         CharacterComment parent = requireActive(parentId);
         requireCharacter(character.getId(), parent);
+        requireVersion(version, parent);
         if (!parent.isRoot()) throw new AppException(ErrorCode.REPLY_DEPTH_EXCEEDED);
         VerifiedCharacter verified = requireVerified(memberId, character.getId());
-        CharacterEvaluation evaluation = evaluationReader.requireEvaluation(character.getId());
+        CharacterEvaluation evaluation = parent.getEvaluation();
         requireOpenVersion(evaluation);
         requireWriteInterval(memberId, evaluation.getId());
         save(() -> new CharacterComment(member, evaluation, verified, parent, content));
@@ -99,6 +109,7 @@ public class CommentService {
         memberService.requireActiveForWrite(memberId);
         CharacterComment comment = requireActive(commentId);
         requireCharacter(expectedCharacterId, comment);
+        requireOpenVersion(comment.getEvaluation());
         requireOwner(memberId, comment);
         VerifiedCharacter verified = requireVerified(
                 memberId, comment.getEvaluation().getCharacter().getId()
@@ -115,6 +126,7 @@ public class CommentService {
         memberService.requireActiveForWrite(memberId);
         CharacterComment comment = requireActive(commentId);
         requireCharacter(expectedCharacterId, comment);
+        requireOpenVersion(comment.getEvaluation());
         requireOwner(memberId, comment);
         comment.deleteByAuthor(LocalDateTime.now(clock));
     }
@@ -124,6 +136,7 @@ public class CommentService {
         memberService.requireActiveForWrite(memberId);
         CharacterComment comment = requireActive(commentId);
         requireCharacter(expectedCharacterId, comment);
+        requireOpenVersion(comment.getEvaluation());
         if (comment.getMember().getId().equals(memberId)) {
             throw new AppException(ErrorCode.SELF_LIKE_NOT_ALLOWED);
         }
@@ -141,11 +154,14 @@ public class CommentService {
     public CommentPageView view(
             Long memberId,
             GameCharacter character,
+            GameVersion version,
             EidolonFilter filter,
             CommentSort sort,
             int requestedPage
     ) {
-        CharacterEvaluation evaluation = evaluationReader.requireEvaluation(character.getId());
+        CharacterEvaluation evaluation = evaluationReader.requireEvaluation(
+                character.getId(), version.getId()
+        );
         int pageNumber = Math.max(0, requestedPage);
         Page<CharacterComment> page = commentRepository.findVisibleRoots(
                 evaluation.getId(), filter.getMinimum(), filter.getMaximum(),
@@ -192,10 +208,16 @@ public class CommentService {
         );
     }
 
-    public ReplyThreadView replies(Long memberId, GameCharacter character, long parentId) {
+    public ReplyThreadView replies(
+            Long memberId,
+            GameCharacter character,
+            GameVersion version,
+            long parentId
+    ) {
         CharacterComment parent = commentRepository.findDetailedById(parentId)
                 .orElseThrow(() -> new AppException(ErrorCode.COMMENT_NOT_FOUND));
         requireCharacter(character.getId(), parent);
+        requireVersion(version, parent);
         if (!parent.isRoot()) throw new AppException(ErrorCode.REPLY_DEPTH_EXCEEDED);
         List<CharacterComment> replies = commentRepository
                 .findTop100ByParent_IdAndStatusOrderByCreatedAtAsc(parentId, CommentStatus.ACTIVE);
@@ -209,10 +231,12 @@ public class CommentService {
         return new ReplyThreadView(views, total);
     }
 
-    public boolean canComment(Long memberId, Long characterId) {
+    public boolean canComment(Long memberId, Long characterId, GameVersion version) {
         if (memberId == null) return false;
         MemberAccount member = memberService.requireReadable(memberId);
-        CharacterEvaluation evaluation = evaluationReader.requireEvaluation(characterId);
+        CharacterEvaluation evaluation = evaluationReader.requireEvaluation(
+                characterId, version.getId()
+        );
         return evaluation.getVersion().getStatus() == VersionStatus.OPEN
                 && member.isActive()
                 && member.isNicknameConfigured()
@@ -330,9 +354,18 @@ public class CommentService {
         }
     }
 
+    private void requireVersion(GameVersion expectedVersion, CharacterComment comment) {
+        if (!comment.getEvaluation().getVersion().getId().equals(expectedVersion.getId())) {
+            throw new AppException(ErrorCode.COMMENT_NOT_FOUND);
+        }
+    }
+
     private void requireOpenVersion(CharacterEvaluation evaluation) {
         if (evaluation.getVersion().getStatus() != VersionStatus.OPEN) {
-            throw new AppException(ErrorCode.VERSION_STATE_CONFLICT, "댓글 작성이 마감된 버전입니다.");
+            throw new AppException(
+                    ErrorCode.VERSION_STATE_CONFLICT,
+                    "종료된 버전의 댓글은 작성·수정·삭제·추천할 수 없습니다."
+            );
         }
     }
 }

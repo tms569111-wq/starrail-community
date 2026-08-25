@@ -33,8 +33,11 @@ spring:
       read-timeout: 8s
   thymeleaf:
     cache: false
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
 
 server:
+  shutdown: graceful
   servlet:
     session:
       cookie:
@@ -43,6 +46,15 @@ server:
   error:
     whitelabel:
       enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
 
 app:
   operator:

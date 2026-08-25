@@ -4,6 +4,8 @@ import com.starrailhearing.character.domain.GameCharacter;
 import com.starrailhearing.character.service.CharacterService;
 import com.starrailhearing.comment.service.CommentSort;
 import com.starrailhearing.common.exception.AppException;
+import com.starrailhearing.evaluation.domain.GameVersion;
+import com.starrailhearing.evaluation.service.VersionBrowseService;
 import com.starrailhearing.member.service.CurrentMemberProvider;
 import com.starrailhearing.moderation.domain.ReportReason;
 import com.starrailhearing.moderation.service.ModerationService;
@@ -19,15 +21,18 @@ public class CommunitySafetyController {
     private final CharacterService characterService;
     private final CurrentMemberProvider currentMemberProvider;
     private final ModerationService moderationService;
+    private final VersionBrowseService versionBrowseService;
 
     public CommunitySafetyController(
             CharacterService characterService,
             CurrentMemberProvider currentMemberProvider,
-            ModerationService moderationService
+            ModerationService moderationService,
+            VersionBrowseService versionBrowseService
     ) {
         this.characterService = characterService;
         this.currentMemberProvider = currentMemberProvider;
         this.moderationService = moderationService;
+        this.versionBrowseService = versionBrowseService;
     }
 
     @PostMapping("/characters/{slug}/comments/{commentId}/report")
@@ -36,12 +41,18 @@ public class CommunitySafetyController {
             @PathVariable long commentId,
             @RequestParam String reason,
             @RequestParam(required = false) String details,
+            @RequestParam(name = "version", required = false) String version,
             @RequestParam(name = "filter", required = false) String filter,
             @RequestParam(name = "sort", required = false) String sort,
             RedirectAttributes redirect
     ) {
+        String redirectVersion = null;
         try {
-            GameCharacter character = characterService.requireActive(slug);
+            GameVersion selectedVersion = versionBrowseService.requireSelected(version);
+            redirectVersion = selectedVersion.getVersionCode();
+            GameCharacter character = characterService.requireActiveForVersion(
+                    slug, selectedVersion.getId()
+            );
             moderationService.reportComment(
                     currentMemberProvider.requireCurrentMemberId(),
                     commentId,
@@ -53,12 +64,13 @@ public class CommunitySafetyController {
         } catch (AppException | IllegalArgumentException exception) {
             redirect.addFlashAttribute("errorMessage", exception.getMessage());
         }
-        return redirect(slug, filter, sort);
+        return redirect(slug, redirectVersion, filter, sort);
     }
 
-    private String redirect(String slug, String filter, String sort) {
+    private String redirect(String slug, String version, String filter, String sort) {
         return "redirect:/characters/" + slug
-                + "?filter=" + EidolonFilter.from(filter).name()
+                + (version == null ? "?" : "?version=" + version + "&")
+                + "filter=" + EidolonFilter.from(filter).name()
                 + "&sort=" + CommentSort.from(sort).name()
                 + "#comments";
     }

@@ -21,7 +21,9 @@
             <div class="hero__facts">
                 <span><strong>0~6</strong> 정확한 성혼 저장</span>
                 <span><strong>5+3</strong> 전시 캐릭터 누적 인증</span>
-                <span><strong th:text="${currentVersion}">4.4</strong> 현재 평가 회차</span>
+                <span><strong th:text="${currentVersion}">4.4</strong>
+                    <span th:text="${selectedVersionOpen ? '현재 평가 회차' : '종료된 평가 회차'}">현재 평가 회차</span>
+                </span>
             </div>
         </div>
         <div class="hero__visual" th:if="${heroCharacter != null}">
@@ -39,14 +41,14 @@
         <div class="section-heading">
             <div>
                 <span class="eyebrow">COMMUNITY TIER BOARD</span>
-                <h2 th:text="|${selectedEidolonFilter.label} 캐릭터 티어표|">전체 캐릭터 티어표</h2>
+                <h2 th:text="|Version ${currentVersion} · ${selectedEidolonFilter.label} 캐릭터 티어표|">전체 캐릭터 티어표</h2>
             </div>
             <p><strong th:text="${characterCount}">0</strong>명의 검색 결과</p>
         </div>
 
         <nav class="eidolon-tabs" aria-label="성혼 단계별 티어표 필터">
             <a th:each="item : ${eidolonFilters}"
-               th:href="@{/(q=${keyword},element=${selectedElement},path=${selectedPath},filter=${item.name()})} + '#characters'"
+               th:href="@{/(q=${keyword},element=${selectedElement},path=${selectedPath},filter=${item.name()},version=${selectedVersionCode})} + '#characters'"
                th:classappend="${selectedEidolonFilter == item} ? ' is-active'"
                th:text="${item.label}">전체</a>
         </nav>
@@ -57,6 +59,13 @@
                 <span class="sr-only">캐릭터 검색</span>
                 <input type="search" name="q" th:value="${keyword}" placeholder="캐릭터 이름 검색">
             </label>
+            <select name="version" aria-label="평가 버전 선택">
+                <option th:if="${versions.isEmpty()}" value="">버전 준비 중</option>
+                <option th:each="option : ${versions}"
+                        th:value="${option.versionCode}"
+                        th:text="|${option.versionCode} · ${option.statusLabel}|"
+                        th:selected="${option.versionCode == selectedVersionCode}">4.4 · 진행 중</option>
+            </select>
             <select name="element" aria-label="속성 필터">
                 <option th:each="option : ${elements}"
                         th:value="${option.value}"
@@ -83,7 +92,7 @@
                 <div class="tier-lane__characters" th:if="${!row.characters.isEmpty()}">
                     <a class="tier-character"
                        th:each="card : ${row.characters}"
-                       th:href="@{/characters/{slug}(slug=${card.slug})}"
+                       th:href="@{/characters/{slug}(slug=${card.slug},version=${selectedVersionCode})}"
                        th:title="|${card.elementName} · ${card.pathName} · ${card.voteCount}표|">
                         <div class="tier-character__portrait"
                              th:classappend="| element-${card.elementCode}|">

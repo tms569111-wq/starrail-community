@@ -38,4 +38,33 @@ public interface GameCharacterRepository extends JpaRepository<GameCharacter, Lo
             @Param("element") String element,
             @Param("path") String path
     );
+
+    @Query("""
+            select c from CharacterEvaluation evaluation
+            join evaluation.character c
+            where evaluation.version.id = :versionId
+              and c.status = com.starrailhearing.character.domain.CharacterStatus.ACTIVE
+              and (:keyword = '' or lower(c.name) like lower(concat('%', :keyword, '%')))
+              and (:element = '' or c.elementCode = :element)
+              and (:path = '' or c.pathCode = :path)
+            order by c.displayOrder asc, c.name asc
+            """)
+    List<GameCharacter> searchByVersion(
+            @Param("versionId") Long versionId,
+            @Param("keyword") String keyword,
+            @Param("element") String element,
+            @Param("path") String path
+    );
+
+    @Query("""
+            select c from CharacterEvaluation evaluation
+            join evaluation.character c
+            where evaluation.version.id = :versionId
+              and c.slug = :slug
+              and c.status = com.starrailhearing.character.domain.CharacterStatus.ACTIVE
+            """)
+    Optional<GameCharacter> findActiveBySlugAndVersion(
+            @Param("slug") String slug,
+            @Param("versionId") Long versionId
+    );
 }

@@ -18,7 +18,10 @@ public interface GameVersionRepository extends JpaRepository<GameVersion, Long> 
     @Query("select version from GameVersion version where version.id = :id")
     Optional<GameVersion> findForUpdateById(@Param("id") Long id);
     Optional<GameVersion> findFirstByStatusOrderByOpenedAtDesc(VersionStatus status);
+    Optional<GameVersion> findFirstByStatusOrderByCreatedAtDesc(VersionStatus status);
+    Optional<GameVersion> findFirstByStatusOrderByClosedAtDesc(VersionStatus status);
     boolean existsByStatusIn(List<VersionStatus> statuses);
     List<GameVersion> findAllByOrderByCreatedAtDesc();
     List<GameVersion> findAllByStatusIn(List<VersionStatus> statuses);
+    List<GameVersion> findAllByStatusInOrderByCreatedAtDesc(List<VersionStatus> statuses);
 }
