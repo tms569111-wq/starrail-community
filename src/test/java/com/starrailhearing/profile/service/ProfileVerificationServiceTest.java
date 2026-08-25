@@ -1,8 +1,6 @@
 package com.starrailhearing.profile.service;
 
 import com.starrailhearing.character.domain.ProfileProvider;
-import com.starrailhearing.common.exception.AppException;
-import com.starrailhearing.common.exception.ErrorCode;
 import com.starrailhearing.config.AppProperties;
 import com.starrailhearing.member.service.MemberService;
 import com.starrailhearing.profile.client.GameProfileClient;
@@ -19,11 +17,9 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,6 +27,7 @@ class ProfileVerificationServiceTest {
 
     private static final long MEMBER_ID = 1L;
     private static final String UID = "826149992";
+    private static final String VERIFICATION_STATE_TOKEN = "PROFILE_VERIFICATION";
     private static final Duration SYNC_COOLDOWN = Duration.ofMinutes(1);
     private static final Clock CLOCK = Clock.fixed(
             Instant.parse("2026-08-23T00:00:00Z"),
@@ -38,13 +35,13 @@ class ProfileVerificationServiceTest {
     );
 
     @Test
-    void UID_최초_등록은_소개문에_투표가_포함되면_통과한다() {
+    void UID_최초_등록은_소개문과_무관하게_통과한다() {
         Fixture fixture = new Fixture();
-        PublicGameProfile profile = profile("반갑습니다. 투표! 참여 중입니다.");
+        PublicGameProfile profile = profile("평범한 소개문");
         ProfileChallengeView expected = new ProfileChallengeView(
                 UID,
                 profile.nickname(),
-                "투표!",
+                VERIFICATION_STATE_TOKEN,
                 LocalDateTime.now(CLOCK).plusMinutes(10)
         );
         when(fixture.profileClient.fetch(UID, false)).thenReturn(profile);
@@ -52,7 +49,7 @@ class ProfileVerificationServiceTest {
                 eq(MEMBER_ID),
                 eq(UID),
                 eq(profile),
-                eq("투표!"),
+                eq(VERIFICATION_STATE_TOKEN),
                 any(LocalDateTime.class)
         )).thenReturn(expected);
 
@@ -62,37 +59,35 @@ class ProfileVerificationServiceTest {
     }
 
     @Test
-    void UID_최초_등록은_소개문에_투표가_없으면_거절한다() {
+    void UID_최초_등록은_빈_소개문도_통과한다() {
         Fixture fixture = new Fixture();
-        when(fixture.profileClient.fetch(UID, false)).thenReturn(profile("평범한 소개문"));
+        PublicGameProfile profile = profile("");
+        when(fixture.profileClient.fetch(UID, false)).thenReturn(profile);
 
-        assertThatThrownBy(() -> fixture.service.prepare(MEMBER_ID, UID))
-                .isInstanceOfSatisfying(AppException.class, exception ->
-                        assertThat(exception.getErrorCode())
-                                .isEqualTo(ErrorCode.PROFILE_SIGNATURE_MISMATCH)
-                );
-        verify(fixture.persistenceService, never()).prepare(
+        fixture.service.prepare(MEMBER_ID, UID);
+
+        verify(fixture.persistenceService).prepare(
                 eq(MEMBER_ID),
                 eq(UID),
-                any(PublicGameProfile.class),
-                any(String.class),
+                eq(profile),
+                eq(VERIFICATION_STATE_TOKEN),
                 any(LocalDateTime.class)
         );
     }
 
     @Test
-    void 최종_인증도_소개문에_투표가_포함되면_통과한다() {
+    void 최종_인증도_소개문과_무관하게_통과한다() {
         Fixture fixture = new Fixture();
-        PublicGameProfile profile = profile("안녕하세요. 투표! 부탁드립니다.");
+        PublicGameProfile profile = profile("원래 사용하던 소개문");
         ProfileSyncResult expected = new ProfileSyncResult(1, 1, 0, 0);
         when(fixture.persistenceService.verificationContext(
                 eq(MEMBER_ID),
                 any(LocalDateTime.class)
-        )).thenReturn(new ProfileVerificationContext(UID, "투표!"));
+        )).thenReturn(new ProfileVerificationContext(UID, VERIFICATION_STATE_TOKEN));
         when(fixture.profileClient.fetch(UID, true)).thenReturn(profile);
         when(fixture.persistenceService.completeVerification(
                 eq(MEMBER_ID),
-                eq("투표!"),
+                eq(VERIFICATION_STATE_TOKEN),
                 eq(profile),
                 any(LocalDateTime.class)
         )).thenReturn(expected);
