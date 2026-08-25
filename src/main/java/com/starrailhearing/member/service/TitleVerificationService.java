@@ -34,6 +34,10 @@ public class TitleVerificationService {
         return persistenceService.memberViews(memberId);
     }
 
+    public boolean hasVerifiedProfile(long memberId) {
+        return persistenceService.hasVerifiedProfile(memberId);
+    }
+
     public List<TitleRequestView> adminViews(long operatorId) {
         return persistenceService.adminViews(operatorId);
     }

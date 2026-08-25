@@ -125,7 +125,7 @@
     <section class="admin-section" id="titles">
         <div class="section-heading section-heading--compact"><div><span class="eyebrow">PRIVATE EVIDENCE</span><h2>칭호 인증</h2></div></div>
         <div class="admin-card" th:each="request : ${titleRequests}">
-            <div class="admin-card__heading"><strong th:text="|${request.memberNickname} · Version ${request.gameVersion}|">신청</strong><span class="status-chip" th:text="${request.status}">PENDING</span></div>
+            <div class="admin-card__heading"><strong th:text="|${request.memberNickname} · Version ${request.gameVersion}|">신청</strong><span class="status-chip" th:text="${request.status.label}">검토 대기</span></div>
             <a th:if="${request.imageAvailable}" target="_blank" rel="noopener" th:href="@{/admin/title-requests/{id}/image(id=${request.id})}">비공개 증빙 열기</a>
             <p th:if="${request.reviewNote != null}" th:text="${request.reviewNote}">검토 메모</p>
             <form class="admin-action-form" th:if="${request.status.name() == 'PENDING'}" method="post" th:action="@{/admin/title-requests/{id}(id=${request.id})}">
@@ -134,6 +134,7 @@
                 <button class="button button--primary button--small" type="submit">결정 및 파일 삭제</button>
             </form>
         </div>
+        <p class="empty-inline" th:if="${titleRequests.isEmpty()}">접수된 칭호 인증 신청이 없습니다.</p>
     </section>
 
     <section class="admin-section" id="members">
