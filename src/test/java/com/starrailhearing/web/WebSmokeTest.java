@@ -79,6 +79,11 @@ class WebSmokeTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("운영자 센터")));
 
+        mockMvc.perform(get("/me/account").with(operatorLogin()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("이상중재 칭호 신청")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("UID 인증을 먼저 완료")));
+
         mockMvc.perform(post("/me/account/nickname")
                         .with(operatorLogin())
                         .with(csrf())

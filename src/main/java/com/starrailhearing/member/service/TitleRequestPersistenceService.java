@@ -59,6 +59,13 @@ public class TitleRequestPersistenceService {
                 memberId, ProfileVerificationStatus.VERIFIED
         )) throw new AppException(ErrorCode.PROFILE_VERIFICATION_REQUIRED);
         String normalizedVersion = normalizeVersion(version);
+        String applicationVersion = normalizeVersion(properties.operator().platinumVersion());
+        if (!applicationVersion.equals(normalizedVersion)) {
+            throw new AppException(
+                    ErrorCode.INVALID_INPUT,
+                    "현재 칭호 인증을 신청할 수 있는 버전은 " + applicationVersion + "입니다."
+            );
+        }
         if (versionRepository.findByVersionCode(normalizedVersion).isEmpty()) {
             throw new AppException(ErrorCode.VERSION_NOT_FOUND);
         }
@@ -84,6 +91,13 @@ public class TitleRequestPersistenceService {
         memberService.requireReadable(memberId);
         return repository.findAllByMember_IdOrderByCreatedAtDesc(memberId).stream()
                 .map(this::toView).toList();
+    }
+
+    public boolean hasVerifiedProfile(long memberId) {
+        memberService.requireReadable(memberId);
+        return profileRepository.existsByMember_IdAndVerificationStatus(
+                memberId, ProfileVerificationStatus.VERIFIED
+        );
     }
 
     public List<TitleRequestView> adminViews(long operatorId) {

@@ -20,6 +20,7 @@
             <th:block th:if="${currentUser != null}">
                 <a th:if="${currentUser.admin}" th:href="@{/admin}">운영</a>
                 <a th:href="@{/me/profile}">UID 인증</a>
+                <a th:href="@{/me/account#title-verification}">칭호 신청</a>
                 <a class="status-chip" th:if="${!currentUser.nicknameConfigured}" th:href="@{/me/account}">닉네임 설정 필요</a>
                 <a class="status-chip" th:if="${currentUser.nicknameConfigured and !currentUser.canWrite}" th:href="@{/me/account}">작성 정지</a>
                 <a class="profile-link" th:href="@{/me/account}">

@@ -50,6 +50,7 @@ public class AccountController {
         model.addAttribute("member", memberService.requireReadable(memberId));
         model.addAttribute("badges", badgeService.activeBadges(memberId));
         model.addAttribute("currentVersion", properties.operator().platinumVersion());
+        model.addAttribute("titleProfileVerified", titleVerificationService.hasVerifiedProfile(memberId));
         model.addAttribute("titleRequests", titleVerificationService.memberViews(memberId));
         return "account";
     }
