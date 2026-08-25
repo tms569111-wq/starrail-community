@@ -61,6 +61,10 @@ class WebSmokeTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("붕스청문회")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("전체 캐릭터 티어표")));
 
+        mockMvc.perform(get("/").param("filter", "E1"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("1돌 캐릭터 티어표")));
+
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Google 계정으로 계속")));

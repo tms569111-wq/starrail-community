@@ -476,6 +476,16 @@ img {
     font-weight: 900;
 }
 
+.status-chip--blocked,
+.blocked-status {
+    color: var(--danger) !important;
+    font-weight: 900;
+}
+
+.status-chip--blocked {
+    background: rgba(255, 125, 145, 0.12);
+}
+
 .admin-action-form,
 .admin-member__forms,
 .badge-form {

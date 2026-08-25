@@ -2,6 +2,7 @@ package com.starrailhearing.web;
 
 import com.starrailhearing.character.domain.GameCharacter;
 import com.starrailhearing.character.service.CharacterService;
+import com.starrailhearing.vote.service.EidolonFilter;
 import com.starrailhearing.vote.service.VoteService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -50,17 +51,21 @@ public class HomeController {
             @RequestParam(name = "q", required = false) String keyword,
             @RequestParam(name = "element", required = false) String element,
             @RequestParam(name = "path", required = false) String path,
+            @RequestParam(name = "filter", required = false) String filterValue,
             @RequestParam(name = "withdrawn", required = false) String withdrawn,
-        Model model
+            Model model
     ) {
+        EidolonFilter filter = EidolonFilter.from(filterValue);
         List<GameCharacter> characters = characterService.search(keyword, element, path);
-        model.addAttribute("tierRows", voteService.tierBoard(characters));
+        model.addAttribute("tierRows", voteService.tierBoard(characters, filter));
         model.addAttribute("characterCount", characters.size());
         model.addAttribute("keyword", keyword == null ? "" : keyword);
         model.addAttribute("selectedElement", element == null ? "" : element);
         model.addAttribute("selectedPath", path == null ? "" : path);
         model.addAttribute("elements", ELEMENTS);
         model.addAttribute("paths", PATHS);
+        model.addAttribute("eidolonFilters", EidolonFilter.values());
+        model.addAttribute("selectedEidolonFilter", filter);
         model.addAttribute("heroCharacter", characters.isEmpty() ? null : characters.get(0));
         model.addAttribute("currentVersion", voteService.currentVersionCode());
         model.addAttribute("withdrawn", withdrawn != null);
