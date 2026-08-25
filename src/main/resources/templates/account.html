@@ -50,32 +50,33 @@
             </div>
         </section>
 
-        <section class="panel account-panel" id="title-verification">
-            <span class="eyebrow">TITLE VERIFICATION</span>
-            <h2>이상중재 칭호 신청</h2>
-            <p>UID 인증을 마친 계정만 신청할 수 있습니다. 이상중재 클리어 여부와 본인 UID를 함께 확인할 수 있는 스크린샷을 올려 주세요.</p>
-            <p>JPG·PNG·WebP, 700KB 이하, 가로·세로 1600px 이하만 받습니다. 증빙은 운영자만 볼 수 있고, 승인·거절 또는 만료 시 삭제됩니다.</p>
-            <form class="stack-form" th:if="${member.status.name() == 'ACTIVE' and member.nicknameConfigured and titleProfileVerified}" method="post" enctype="multipart/form-data"
-                  th:action="@{/me/account/title-requests}">
-                <label>게임 버전
-                    <input name="version" maxlength="20" th:value="${currentVersion}" readonly required>
-                </label>
-                <label>인증 스크린샷
-                    <input name="image" type="file" accept="image/jpeg,image/png,image/webp" required>
-                </label>
-                <button class="button button--primary" type="submit">이상중재 칭호 신청</button>
-            </form>
-            <p th:if="${member.status.name() == 'ACTIVE' and !member.nicknameConfigured}">먼저 이 페이지에서 닉네임을 확정해 주세요.</p>
-            <p th:if="${member.status.name() == 'ACTIVE' and member.nicknameConfigured and !titleProfileVerified}">
-                칭호를 신청하려면 <a th:href="@{/me/profile}">UID 인증을 먼저 완료</a>해 주세요.
-            </p>
-            <h3 th:if="${!titleRequests.isEmpty()}">내 신청 내역</h3>
-            <div class="badge-history" th:each="request : ${titleRequests}">
-                <strong th:text="|Version ${request.gameVersion} · ${request.status.label}|">신청</strong>
-                <span th:text="${request.reviewNote ?: request.createdAt}">상태</span>
-            </div>
-        </section>
     </div>
+
+    <section class="panel account-panel account-panel--wide" id="title-verification">
+        <span class="eyebrow">TITLE VERIFICATION</span>
+        <h2>이상중재 칭호 신청</h2>
+        <p>UID 인증을 마친 계정만 신청할 수 있습니다. 이상중재 클리어 여부와 본인 UID를 함께 확인할 수 있는 스크린샷을 올려 주세요.</p>
+        <p>JPG·PNG·WebP, 700KB 이하, 가로·세로 1600px 이하만 받습니다. 증빙은 운영자만 볼 수 있고, 승인·거절 또는 만료 시 삭제됩니다.</p>
+        <form class="stack-form" th:if="${member.status.name() == 'ACTIVE' and member.nicknameConfigured and titleProfileVerified}" method="post" enctype="multipart/form-data"
+              th:action="@{/me/account/title-requests}">
+            <label>게임 버전
+                <input name="version" maxlength="20" th:value="${currentVersion}" readonly required>
+            </label>
+            <label>인증 스크린샷
+                <input name="image" type="file" accept="image/jpeg,image/png,image/webp" required>
+            </label>
+            <button class="button button--primary" type="submit">이상중재 칭호 신청</button>
+        </form>
+        <p th:if="${member.status.name() == 'ACTIVE' and !member.nicknameConfigured}">먼저 이 페이지에서 닉네임을 확정해 주세요.</p>
+        <p th:if="${member.status.name() == 'ACTIVE' and member.nicknameConfigured and !titleProfileVerified}">
+            칭호를 신청하려면 <a th:href="@{/me/profile}">UID 인증을 먼저 완료</a>해 주세요.
+        </p>
+        <h3 th:if="${!titleRequests.isEmpty()}">내 신청 내역</h3>
+        <div class="badge-history" th:each="request : ${titleRequests}">
+            <strong th:text="|Version ${request.gameVersion} · ${request.status.label}|">신청</strong>
+            <span th:text="${request.reviewNote ?: request.createdAt}">상태</span>
+        </div>
+    </section>
 
     <section class="panel account-panel account-panel--wide danger-zone">
         <span class="eyebrow">WITHDRAWAL</span>
