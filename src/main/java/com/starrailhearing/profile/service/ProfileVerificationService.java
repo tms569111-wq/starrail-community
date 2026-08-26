@@ -109,7 +109,7 @@ public class ProfileVerificationService {
     private boolean shouldReleaseReservation(ErrorCode errorCode) {
         return errorCode == ErrorCode.UPSTREAM_UNAVAILABLE
                 || errorCode == ErrorCode.PROFILE_REQUEST_THROTTLED
-                || errorCode == ErrorCode.PROFILE_SYNC_COOLDOWN;
+                || errorCode == ErrorCode.PROFILE_UPSTREAM_THROTTLED;
     }
 
     private void requireCharacters(PublicGameProfile publicProfile) {
