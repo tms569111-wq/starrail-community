@@ -89,17 +89,16 @@
             <form method="post" th:if="${currentUser.canManageProfile}" th:action="@{/me/profile/refresh}"
                   data-profile-fetch-form>
                 <button class="button button--secondary" type="submit" data-profile-fetch-button
-                        data-loading-text="캐릭터 정보를 가져오는 중입니다…"
-                        th:disabled="${profile.fetchCooldownSeconds > 0}"
-                        th:text="|현재 ${profile.characters.size()}명 다시 불러오기|">현재 캐릭터 다시 불러오기</button>
+                        data-loading-text="현재 전시 캐릭터를 확인하는 중입니다…"
+                        th:disabled="${profile.fetchCooldownSeconds > 0}">새 전시 캐릭터 확인하기</button>
             </form>
         </div>
 
         <div class="sync-tip">
             <strong>더 많은 캐릭터를 인증하려면</strong>
-            <p>게임에서 전시 5명과 지원 3명을 바꾼 뒤 Enka 캐시가 만료될 때까지 기다렸다가 다시 불러오세요.
-                변경 직후에는 이전 구성이 보일 수 있으며, 버튼을 반복해서 눌러도 Enka 캐시는 강제로 갱신되지 않습니다.
-                이전에 인증한 캐릭터는 삭제되지 않습니다.</p>
+            <p>게임에서 전시·지원 캐릭터 구성을 바꾼 뒤 새 전시 캐릭터 확인하기를 눌러 주세요.
+                서버에서 현재 공개 중인 캐릭터만 다시 조회해 기존 누적 목록에 새 캐릭터를 추가하고 성혼 단계가 올라간 캐릭터는 갱신합니다.
+                이미 인증한 캐릭터는 목록에서 삭제되지 않으며, Enka 캐시가 남아 있으면 변경 직후의 새 구성이 바로 보이지 않을 수 있습니다.</p>
         </div>
 
         <div class="section-heading section-heading--compact">
