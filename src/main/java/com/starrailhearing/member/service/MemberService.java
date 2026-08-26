@@ -85,6 +85,12 @@ public class MemberService {
     }
 
     @Transactional
+    public void releaseProfileFetchReservation(long memberId, LocalDateTime reservedUntil) {
+        MemberAccount member = requireActiveLocked(memberId);
+        member.releaseProfileFetchReservation(reservedUntil);
+    }
+
+    @Transactional
     public MemberAccount requireReadable(long memberId) {
         MemberAccount member = require(memberId);
         member.restoreIfExpired(LocalDateTime.now(clock));
