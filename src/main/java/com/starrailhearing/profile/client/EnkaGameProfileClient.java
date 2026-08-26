@@ -176,7 +176,7 @@ public class EnkaGameProfileClient implements ProfileProviderClient {
                         until,
                         backoff
                 );
-                throw new AppException(ErrorCode.PROFILE_SYNC_COOLDOWN, exception);
+                throw new AppException(ErrorCode.PROFILE_UPSTREAM_THROTTLED, exception);
             }
             log.warn("ENKA HTTP error uid={} status={} elapsedMs={}", maskedUid, status.value(), elapsedMs);
             if (status.value() == 400 || status.value() == 404 || status.value() == 422) {
@@ -262,7 +262,7 @@ public class EnkaGameProfileClient implements ProfileProviderClient {
                 maskedUid,
                 Math.max(0L, Duration.between(now, until).toMillis())
         );
-        throw new AppException(ErrorCode.PROFILE_SYNC_COOLDOWN);
+        throw new AppException(ErrorCode.PROFILE_UPSTREAM_THROTTLED);
     }
 
     private Instant extendGlobalBackoff(Duration backoff) {
