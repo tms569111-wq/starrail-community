@@ -7,7 +7,6 @@ services:
       DB_URL: "${DB_URL:?DB_URL is required}"
       DB_USERNAME: "${DB_USERNAME:?DB_USERNAME is required}"
       DB_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD is required}"
-      REDIS_URL: redis://redis:6379
       GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}"
       GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:?GOOGLE_CLIENT_SECRET is required}"
       APP_ADMIN_SUBJECT: "${APP_ADMIN_SUBJECT:?APP_ADMIN_SUBJECT is required}"
@@ -16,7 +15,6 @@ services:
       APP_PLATINUM_COLOR: "${APP_PLATINUM_COLOR:-#8DE9FF}"
       MIHOMO_USER_AGENT: "${MIHOMO_USER_AGENT:?MIHOMO_USER_AGENT is required}"
       ENKA_USER_AGENT: "${ENKA_USER_AGENT:?ENKA_USER_AGENT is required}"
-      ENKA_MAX_REQUESTS_PER_SECOND: "${ENKA_MAX_REQUESTS_PER_SECOND:-3}"
       TITLE_PRIVATE_UPLOAD_DIR: /app/private-uploads/title-verification
       SPRING_THYMELEAF_CACHE: "${SPRING_THYMELEAF_CACHE:-true}"
       SERVER_FORWARD_HEADERS_STRATEGY: "${SERVER_FORWARD_HEADERS_STRATEGY:-framework}"
@@ -25,9 +23,6 @@ services:
       - "127.0.0.1:8080:8080"
     volumes:
       - title-uploads:/app/private-uploads/title-verification
-    depends_on:
-      redis:
-        condition: service_healthy
     security_opt:
       - no-new-privileges:true
     logging:
@@ -35,23 +30,6 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
-
-  redis:
-    image: redis:7.4-alpine
-    restart: unless-stopped
-    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-    security_opt:
-      - no-new-privileges:true
-    logging:
-      driver: json-file
-      options:
-        max-size: "5m"
-        max-file: "3"
 
 volumes:
   title-uploads:
