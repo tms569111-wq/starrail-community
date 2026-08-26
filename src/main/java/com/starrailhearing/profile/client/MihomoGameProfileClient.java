@@ -65,7 +65,7 @@ public class MihomoGameProfileClient implements ProfileProviderClient {
                     elapsedMillis(startedAt)
             );
             if (status.value() == 429) {
-                throw new AppException(ErrorCode.PROFILE_SYNC_COOLDOWN, exception);
+                throw new AppException(ErrorCode.PROFILE_UPSTREAM_THROTTLED, exception);
             }
             if (status.value() == 400 || status.value() == 404 || status.value() == 422) {
                 throw new AppException(ErrorCode.PROFILE_LOOKUP_FAILED, exception);
