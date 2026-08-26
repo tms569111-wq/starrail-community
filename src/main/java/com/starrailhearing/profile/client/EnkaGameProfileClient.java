@@ -37,6 +37,7 @@ public class EnkaGameProfileClient implements ProfileProviderClient {
     private final RestClient restClient;
     private final Clock clock;
     private final Duration cacheDefaultTtl;
+    private final Duration cacheMaximumTtl;
     private final int cacheMaxEntries;
     private final int maxRequestsPerSecond;
     private final int maxConcurrentRequests;
@@ -60,6 +61,7 @@ public class EnkaGameProfileClient implements ProfileProviderClient {
 
         AppProperties.Enka enka = properties.enka();
         this.cacheDefaultTtl = positiveDuration(enka.cacheDefaultTtl(), Duration.ofSeconds(60));
+        this.cacheMaximumTtl = positiveDuration(enka.cacheMaximumTtl(), Duration.ofHours(24));
         this.cacheMaxEntries = Math.max(100, enka.cacheMaxEntries());
         this.maxRequestsPerSecond = Math.max(1, enka.maxRequestsPerSecond());
         this.maxConcurrentRequests = Math.max(1, enka.maxConcurrentRequests());
@@ -73,12 +75,13 @@ public class EnkaGameProfileClient implements ProfileProviderClient {
         this.concurrentSlots = new Semaphore(maxConcurrentRequests, true);
 
         log.info(
-                "ENKA traffic guard configured: rps={}, concurrent={}, waiting={}, waitTimeout={}, cacheDefaultTtl={}, cacheMaxEntries={}, backoff429={}",
+                "ENKA traffic guard configured: rps={}, concurrent={}, waiting={}, waitTimeout={}, cacheDefaultTtl={}, cacheMaximumTtl={}, cacheMaxEntries={}, backoff429={}",
                 maxRequestsPerSecond,
                 maxConcurrentRequests,
                 maxWaitingRequests,
                 requestWaitTimeout,
                 cacheDefaultTtl,
+                cacheMaximumTtl,
                 cacheMaxEntries,
                 backoffOn429
         );
@@ -205,9 +208,14 @@ public class EnkaGameProfileClient implements ProfileProviderClient {
     }
 
     private long cacheTtlSeconds(JsonNode root) {
-        long fallback = Math.max(1L, cacheDefaultTtl.toSeconds());
-        if (root == null) return fallback;
-        return Math.max(1L, root.path("ttl").asLong(fallback));
+        long fallback = cacheDefaultTtl.toSeconds();
+        long requested = root == null ? fallback : root.path("ttl").asLong(fallback);
+        return boundedTtlSeconds(requested, cacheMaximumTtl.toSeconds());
+    }
+
+    static long boundedTtlSeconds(long requested, long maximum) {
+        long safeMaximum = Math.max(1L, maximum);
+        return Math.max(1L, Math.min(requested, safeMaximum));
     }
 
     private void trimCacheIfNeeded() {

@@ -44,6 +44,16 @@ app:
   enka:
     base-url: https://enka.network
     user-agent: StarrailHearing-Test/0.1
+    connect-timeout: 3s
+    read-timeout: 15s
+    cache-default-ttl: 60s
+    cache-maximum-ttl: 24h
+    cache-max-entries: 5000
+    max-requests-per-second: 2
+    max-concurrent-requests: 8
+    max-waiting-requests: 30
+    request-wait-timeout: 15s
+    backoff-on-429: 30s
   profile-client:
     cache-ttl: 20s
     circuit-failure-threshold: 3
