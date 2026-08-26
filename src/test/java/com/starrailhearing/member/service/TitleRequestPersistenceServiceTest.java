@@ -38,7 +38,7 @@ class TitleRequestPersistenceServiceTest {
                 memberService,
                 mock(BadgeService.class),
                 mock(AdminAuditService.class),
-                mock(AppProperties.class),
+                properties("4.5"),
                 Clock.systemUTC(),
                 mock(GameVersionRepository.class)
         );
@@ -68,7 +68,7 @@ class TitleRequestPersistenceServiceTest {
                 mock(MemberService.class),
                 mock(BadgeService.class),
                 mock(AdminAuditService.class),
-                mock(AppProperties.class),
+                properties("4.5"),
                 clock,
                 mock(GameVersionRepository.class)
         );
@@ -93,12 +93,9 @@ class TitleRequestPersistenceServiceTest {
         MemberService memberService = mock(MemberService.class);
         BadgeService badgeService = mock(BadgeService.class);
         AdminAuditService auditService = mock(AdminAuditService.class);
-        AppProperties properties = mock(AppProperties.class);
-        AppProperties.Operator operatorProperties = mock(AppProperties.Operator.class);
+        AppProperties properties = properties("4.5");
         GameVersionRepository versionRepository = mock(GameVersionRepository.class);
 
-        when(properties.operator()).thenReturn(operatorProperties);
-        when(operatorProperties.platinumVersion()).thenReturn("4.5");
         when(memberService.requireActiveForWrite(7L)).thenReturn(mock(MemberAccount.class));
         when(profileRepository.existsByMember_IdAndVerificationStatus(
                 7L, ProfileVerificationStatus.VERIFIED
@@ -111,7 +108,7 @@ class TitleRequestPersistenceServiceTest {
                 badgeService,
                 auditService,
                 properties,
-                mock(Clock.class),
+                Clock.systemUTC(),
                 versionRepository
         );
 
@@ -126,5 +123,17 @@ class TitleRequestPersistenceServiceTest {
 
         verify(versionRepository, never()).findByVersionCode("4.4");
         verify(repository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    private AppProperties properties(String platinumVersion) {
+        return new AppProperties(
+                new AppProperties.Operator("", platinumVersion, "", ""),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
     }
 }
