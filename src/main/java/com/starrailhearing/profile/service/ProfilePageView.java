@@ -14,11 +14,19 @@ public record ProfilePageView(
         LocalDateTime challengeExpiresAt,
         LocalDateTime verifiedAt,
         LocalDateTime lastSyncedAt,
+        long fetchCooldownSeconds,
         List<VerifiedCharacterView> characters
 ) {
     public static ProfilePageView empty() {
         return new ProfilePageView(
-                false, null, null, null, null, null, null, null, List.of()
+                false, null, null, null, null, null, null, null, 0, List.of()
+        );
+    }
+
+    public static ProfilePageView empty(long fetchCooldownSeconds) {
+        return new ProfilePageView(
+                false, null, null, null, null, null, null, null,
+                fetchCooldownSeconds, List.of()
         );
     }
 }

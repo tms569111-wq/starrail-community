@@ -38,15 +38,11 @@ public class ProfileController {
             @RequestParam String uid,
             RedirectAttributes redirect
     ) {
-        try {
-            var challenge = profileService.prepare(currentMemberProvider.requireCurrentMemberId(), uid);
-            redirect.addFlashAttribute(
-                    "successMessage",
-                    challenge.nickname() + " 프로필을 찾았습니다. 아래에서 전시 캐릭터 인증을 완료해 주세요."
-            );
-        } catch (AppException exception) {
-            redirect.addFlashAttribute("errorMessage", exception.getMessage());
-        }
+        runSync(
+                () -> profileService.verifyUid(currentMemberProvider.requireCurrentMemberId(), uid),
+                redirect,
+                "UID 인증 완료"
+        );
         return "redirect:/me/profile";
     }
 

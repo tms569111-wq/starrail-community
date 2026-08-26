@@ -27,7 +27,7 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth -> oauth
                         .loginPage("/login")
-                        .defaultSuccessUrl("/", false)
+                        .defaultSuccessUrl("/me/profile", false)
                         .failureUrl("/login?error")
                         .userInfoEndpoint(info -> info.oidcUserService(googleOidcUserService))
                 )

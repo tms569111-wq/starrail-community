@@ -74,7 +74,7 @@ app:
   mihomo:
     base-url: ${MIHOMO_BASE_URL:https://api.mihomo.me}
     user-agent: ${MIHOMO_USER_AGENT:StarrailHearing/0.1 contact=local-development}
-    sync-cooldown: ${PROFILE_SYNC_COOLDOWN:60s}
+    sync-cooldown: ${PROFILE_SYNC_COOLDOWN:3m}
     challenge-ttl: ${PROFILE_CHALLENGE_TTL:10m}
     resource-base-url: ${STAR_RAIL_RESOURCE_BASE_URL:https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/}
   enka:

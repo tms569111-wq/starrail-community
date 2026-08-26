@@ -38,7 +38,7 @@ app:
   mihomo:
     base-url: https://api.mihomo.me
     user-agent: StarrailHearing-Test/0.1
-    sync-cooldown: 60s
+    sync-cooldown: 3m
     challenge-ttl: 10m
     resource-base-url: https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/
   enka:

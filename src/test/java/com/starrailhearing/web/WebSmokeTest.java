@@ -103,6 +103,24 @@ class WebSmokeTest {
                 .isEqualTo("은하 중재자");
     }
 
+    @Test
+    void 임시_닉네임_회원도_UID_입력_화면을_바로_볼_수_있다() throws Exception {
+        String subject = "web-smoke-new-profile-user";
+        memberRepository.findByAuthProviderAndProviderUserId(
+                        com.starrailhearing.member.domain.AuthProvider.GOOGLE,
+                        subject
+                )
+                .orElseGet(() -> memberRepository.save(MemberAccount.google(
+                        subject, "new-profile@example.com", "개척자-WEBTEST"
+                )));
+
+        mockMvc.perform(get("/me/profile").with(userLogin(subject)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("닉네임은 나중에 정해도 됩니다.")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("지금 바로 게임 UID 인증")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("UID로 캐릭터 인증")));
+    }
+
     private RequestPostProcessor operatorLogin() {
         return oidcLogin()
                 .idToken(token -> token.subject(OPERATOR_SUBJECT))
@@ -110,5 +128,11 @@ class WebSmokeTest {
                         new SimpleGrantedAuthority("ROLE_USER"),
                         new SimpleGrantedAuthority("ROLE_ADMIN")
                 );
+    }
+
+    private RequestPostProcessor userLogin(String subject) {
+        return oidcLogin()
+                .idToken(token -> token.subject(subject))
+                .authorities(new SimpleGrantedAuthority("ROLE_USER"));
     }
 }

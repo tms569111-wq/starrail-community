@@ -47,4 +47,41 @@
             }
         });
     });
+
+    document.querySelectorAll('[data-profile-fetch-form]').forEach(form => {
+        form.addEventListener('submit', event => {
+            const button = form.querySelector('[data-profile-fetch-button]');
+            if (!button || button.disabled) {
+                event.preventDefault();
+                return;
+            }
+            button.disabled = true;
+            button.textContent = button.dataset.loadingText || '캐릭터 정보를 가져오는 중입니다…';
+            form.setAttribute('aria-busy', 'true');
+        });
+    });
+
+    document.querySelectorAll('[data-profile-cooldown]').forEach(panel => {
+        const output = panel.querySelector('[data-profile-countdown]');
+        const seconds = Number.parseInt(panel.dataset.profileCooldown || '0', 10);
+        const deadline = Date.now() + Math.max(0, seconds) * 1000;
+        let timer;
+
+        const update = () => {
+            const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+            const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
+            const rest = String(remaining % 60).padStart(2, '0');
+            if (output) output.textContent = `${minutes}:${rest}`;
+            if (remaining > 0) return;
+
+            document.querySelectorAll('[data-profile-fetch-button]').forEach(button => {
+                button.disabled = false;
+            });
+            panel.hidden = true;
+            window.clearInterval(timer);
+        };
+
+        update();
+        timer = window.setInterval(update, 1000);
+    });
 })();

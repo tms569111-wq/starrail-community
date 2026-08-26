@@ -46,14 +46,13 @@ public class ProfilePersistenceService {
     }
 
     @Transactional
-    public ProfileChallengeView prepare(
+    public ProfileSyncResult bindAndVerify(
             long memberId,
             String uid,
             PublicGameProfile publicProfile,
-            String challengeCode,
-            LocalDateTime expiresAt
+            LocalDateTime now
     ) {
-        memberService.requireActiveForWrite(memberId);
+        memberService.requireActive(memberId);
         profileRepository.findByUid(uid)
                 .filter(profile -> !profile.getMember().getId().equals(memberId))
                 .ifPresent(profile -> {
@@ -73,19 +72,18 @@ public class ProfilePersistenceService {
                 })
                 .orElseGet(() -> new GameProfile(member, uid));
 
-        profile.startChallenge(
+        profile.completeVerification(
                 publicProfile.provider(),
                 publicProfile.nickname(),
                 publicProfile.signature(),
-                challengeCode,
-                expiresAt
+                now
         );
         try {
             profileRepository.saveAndFlush(profile);
         } catch (DataIntegrityViolationException exception) {
             throw new AppException(ErrorCode.UID_ALREADY_BOUND, exception);
         }
-        return new ProfileChallengeView(uid, publicProfile.nickname(), challengeCode, expiresAt);
+        return syncCharacters(profile, publicProfile, now);
     }
 
     public ProfileVerificationContext verificationContext(long memberId, LocalDateTime now) {
@@ -101,7 +99,7 @@ public class ProfilePersistenceService {
             PublicGameProfile publicProfile,
             LocalDateTime now
     ) {
-        memberService.requireActiveForWrite(memberId);
+        memberService.requireActive(memberId);
         GameProfile profile = requireProfileForUpdate(memberId);
         requireActiveChallenge(profile, now);
         if (!Objects.equals(profile.getChallengeCode(), expectedChallengeCode)) {
@@ -132,7 +130,7 @@ public class ProfilePersistenceService {
             LocalDateTime now,
             Duration cooldown
     ) {
-        memberService.requireActiveForWrite(memberId);
+        memberService.requireActive(memberId);
         GameProfile profile = requireProfileForUpdate(memberId);
         requireVerified(profile);
         requireCooldownElapsed(profile, now, cooldown);
@@ -144,7 +142,11 @@ public class ProfilePersistenceService {
         return result;
     }
 
-    public ProfilePageView view(long memberId) {
+    public ProfilePageView view(long memberId, LocalDateTime now) {
+        MemberAccount member = memberService.require(memberId);
+        long fetchCooldownSeconds = remainingCooldownSeconds(
+                member.getProfileFetchAvailableAt(), now
+        );
         return profileRepository.findByMember_Id(memberId)
                 .map(profile -> new ProfilePageView(
                         true,
@@ -155,6 +157,7 @@ public class ProfilePersistenceService {
                         profile.getChallengeExpiresAt(),
                         profile.getVerifiedAt(),
                         profile.getLastSyncedAt(),
+                        fetchCooldownSeconds,
                         verifiedCharacterRepository
                                 .findAllByProfile_IdOrderByCharacter_DisplayOrderAsc(profile.getId())
                                 .stream()
@@ -167,7 +170,13 @@ public class ProfilePersistenceService {
                                 ))
                                 .toList()
                 ))
-                .orElseGet(ProfilePageView::empty);
+                .orElseGet(() -> ProfilePageView.empty(fetchCooldownSeconds));
+    }
+
+    private long remainingCooldownSeconds(LocalDateTime availableAt, LocalDateTime now) {
+        if (availableAt == null || !now.isBefore(availableAt)) return 0;
+        long millis = Duration.between(now, availableAt).toMillis();
+        return Math.max(1, (millis + 999) / 1000);
     }
 
     private ProfileSyncResult syncCharacters(

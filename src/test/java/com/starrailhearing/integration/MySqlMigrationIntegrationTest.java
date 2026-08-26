@@ -25,7 +25,7 @@ class MySqlMigrationIntegrationTest {
             .withPassword("test");
 
     @Test
-    void 실제_MySQL에서_V3_레거시_데이터를_V9까지_안전하게_옮긴다() throws Exception {
+    void 실제_MySQL에서_V3_레거시_데이터를_V10까지_안전하게_옮긴다() throws Exception {
         migrateToV3();
         LegacyRows legacy = insertLegacyRows();
 
@@ -33,6 +33,7 @@ class MySqlMigrationIntegrationTest {
 
         verifyFlywayHistory();
         verifyMembersAndProviders(legacy);
+        assertThat(columnExists("member_account", "profile_fetch_available_at")).isTrue();
         verifyVersionMigration();
         verifyCommentsReportsAndModeration(legacy);
         verifyTitleRequestConstraints();
@@ -167,14 +168,14 @@ class MySqlMigrationIntegrationTest {
     private void verifyFlywayHistory() throws SQLException {
         assertThat(queryLong("""
                 SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1
-                """)).isEqualTo(9);
+                """)).isEqualTo(10);
         assertThat(queryLong("""
                 SELECT COUNT(*) FROM flyway_schema_history WHERE success = 0
                 """)).isZero();
         assertThat(queryString("""
                 SELECT version FROM flyway_schema_history
                 WHERE success = 1 ORDER BY installed_rank DESC LIMIT 1
-                """)).isEqualTo("9");
+                """)).isEqualTo("10");
     }
 
     private void verifyMembersAndProviders(LegacyRows legacy) throws SQLException {
