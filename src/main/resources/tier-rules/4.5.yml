@@ -2,27 +2,27 @@ version: "4.5"
 minimum-sample: 5
 tiers:
   - code: T0
-    label: "T0 · 이상중재 절망급"
+    label: "T0"
     description: "고난도 콘텐츠에서도 압도적인 최상위권"
     score: 5
     display-order: 1
   - code: T05
-    label: "T0.5 · 혼허종 날먹"
+    label: "T0.5"
     description: "혼허종에서 강력하고 범용성이 높음"
     score: 4
     display-order: 2
   - code: T1
-    label: "T1 · 아직은 쓸만함"
+    label: "T1"
     description: "조건이 맞으면 충분히 우수한 성능을 발휘함"
     score: 3
     display-order: 3
   - code: T15
-    label: "T1.5 · 유튜버들 장난감"
+    label: "T1.5"
     description: "높은 투자나 특정 조합에서 경쟁력이 생김"
     score: 2
     display-order: 4
   - code: T2
-    label: "T2 · 애정의 영역"
+    label: "T2"
     description: "현재 기준 육성 효율보다 애정이 중요한 단계"
     score: 1
     display-order: 5
