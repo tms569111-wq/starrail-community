@@ -1,4 +1,15 @@
 (() => {
+    document.querySelectorAll('.character-page textarea[name="content"]').forEach(textarea => {
+        textarea.maxLength = 3000;
+    });
+
+    const commentsSection = document.querySelector('.character-page .comments-section');
+    if (commentsSection) {
+        document.querySelectorAll('.character-page > .flash').forEach(flash => {
+            commentsSection.before(flash);
+        });
+    }
+
     document.querySelectorAll('[data-copy-target]').forEach(button => {
         button.addEventListener('click', async () => {
             const target = document.getElementById(button.dataset.copyTarget);
