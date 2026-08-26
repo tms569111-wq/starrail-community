@@ -31,7 +31,7 @@ public class ResilientGameProfileClient implements GameProfileClient {
             Clock clock
     ) {
         this.providers = providers.stream()
-                .sorted(Comparator.comparingInt(client -> client.provider() == ProfileProvider.MIHOMO ? 0 : 1))
+                .sorted(Comparator.comparingInt(client -> client.provider() == ProfileProvider.ENKA ? 0 : 1))
                 .toList();
         this.properties = properties.profileClient();
         this.clock = clock;

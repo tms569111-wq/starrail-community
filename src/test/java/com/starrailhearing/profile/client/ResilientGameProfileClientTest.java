@@ -20,22 +20,22 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ResilientGameProfileClientTest {
 
     @Test
-    void 주_공급자_장애시_보조_공급자로_폴백하고_짧게_캐시한다() {
+    void 엔카_장애시_미호모로_폴백하고_짧게_캐시한다() {
         AtomicInteger primaryCalls = new AtomicInteger();
         AtomicInteger fallbackCalls = new AtomicInteger();
-        ProfileProviderClient primary = new StubClient(ProfileProvider.MIHOMO, () -> {
+        ProfileProviderClient primary = new StubClient(ProfileProvider.ENKA, () -> {
             primaryCalls.incrementAndGet();
             throw new AppException(ErrorCode.UPSTREAM_UNAVAILABLE);
         });
         PublicGameProfile expected = new PublicGameProfile(
-                ProfileProvider.ENKA, "800000001", "프로필", "", true, List.of()
+                ProfileProvider.MIHOMO, "800000001", "프로필", "", true, List.of()
         );
-        ProfileProviderClient fallback = new StubClient(ProfileProvider.ENKA, () -> {
+        ProfileProviderClient fallback = new StubClient(ProfileProvider.MIHOMO, () -> {
             fallbackCalls.incrementAndGet();
             return expected;
         });
         ResilientGameProfileClient client = new ResilientGameProfileClient(
-                List.of(primary, fallback), properties(),
+                List.of(fallback, primary), properties(),
                 Clock.fixed(Instant.parse("2026-08-18T00:00:00Z"), ZoneOffset.UTC)
         );
 
@@ -47,14 +47,14 @@ class ResilientGameProfileClientTest {
 
     @Test
     void 모든_공급자가_UID를_찾지_못하면_조회_실패를_구분한다() {
-        ProfileProviderClient primary = new StubClient(ProfileProvider.MIHOMO, () -> {
+        ProfileProviderClient primary = new StubClient(ProfileProvider.ENKA, () -> {
             throw new AppException(ErrorCode.PROFILE_LOOKUP_FAILED);
         });
-        ProfileProviderClient fallback = new StubClient(ProfileProvider.ENKA, () -> {
+        ProfileProviderClient fallback = new StubClient(ProfileProvider.MIHOMO, () -> {
             throw new AppException(ErrorCode.PROFILE_LOOKUP_FAILED);
         });
         ResilientGameProfileClient client = new ResilientGameProfileClient(
-                List.of(primary, fallback), properties(),
+                List.of(fallback, primary), properties(),
                 Clock.fixed(Instant.parse("2026-08-18T00:00:00Z"), ZoneOffset.UTC)
         );
 

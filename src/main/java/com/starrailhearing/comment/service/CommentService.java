@@ -38,6 +38,8 @@ import java.util.stream.Collectors;
 public class CommentService {
 
     private static final int PAGE_SIZE = 20;
+    private static final String LIMITED_COMMENT_VERSION = "4.5";
+    private static final long MAX_ROOT_COMMENTS_PER_CHARACTER = 10;
 
     private final MemberService memberService;
     private final VerifiedCharacterRepository verifiedCharacterRepository;
@@ -78,6 +80,7 @@ public class CommentService {
                 character.getId(), version.getId()
         );
         requireOpenVersion(evaluation);
+        requireRootCommentLimit(memberId, evaluation);
         requireWriteInterval(memberId, evaluation.getId());
         save(() -> new CharacterComment(member, evaluation, verified, content));
         return EidolonFilter.forEidolon(verified.getEidolon());
@@ -256,6 +259,18 @@ public class CommentService {
             commentRepository.save(comment.get());
         } catch (IllegalArgumentException exception) {
             throw new AppException(ErrorCode.INVALID_INPUT, exception.getMessage());
+        }
+    }
+
+    private void requireRootCommentLimit(long memberId, CharacterEvaluation evaluation) {
+        if (!LIMITED_COMMENT_VERSION.equals(evaluation.getGameVersion())) return;
+        long count = commentRepository.countByMember_IdAndEvaluation_IdAndParentIsNullAndStatus(
+                memberId,
+                evaluation.getId(),
+                CommentStatus.ACTIVE
+        );
+        if (count >= MAX_ROOT_COMMENTS_PER_CHARACTER) {
+            throw new AppException(ErrorCode.COMMENT_COUNT_LIMIT);
         }
     }
 

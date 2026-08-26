@@ -67,6 +67,12 @@ public interface CharacterCommentRepository extends JpaRepository<CharacterComme
             CommentStatus status
     );
 
+    long countByMember_IdAndEvaluation_IdAndParentIsNullAndStatus(
+            Long memberId,
+            Long evaluationId,
+            CommentStatus status
+    );
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = """
             UPDATE character_comment

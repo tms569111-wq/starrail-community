@@ -33,6 +33,7 @@ public enum ErrorCode {
     UPSTREAM_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "게임 프로필 서버가 잠시 응답하지 않습니다."),
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
     COMMENT_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "자신의 댓글만 수정하거나 삭제할 수 있습니다."),
+    COMMENT_COUNT_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "댓글을 너무 많이 작성하셨습니다!"),
     REPLY_DEPTH_EXCEEDED(HttpStatus.CONFLICT, "대댓글에는 다시 답글을 달 수 없습니다."),
     SELF_LIKE_NOT_ALLOWED(HttpStatus.CONFLICT, "자신의 댓글은 추천할 수 없습니다."),
     REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "신고 내역을 찾을 수 없습니다."),
