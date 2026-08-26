@@ -59,7 +59,7 @@ server:
 management:
   health:
     redis:
-      enabled: ${PROFILE_REDIS_CACHE_ENABLED:false}
+      enabled: false
   endpoints:
     web:
       exposure:
