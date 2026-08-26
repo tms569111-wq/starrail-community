@@ -25,7 +25,7 @@ class MySqlMigrationIntegrationTest {
             .withPassword("test");
 
     @Test
-    void 실제_MySQL에서_V3_레거시_데이터를_V10까지_안전하게_옮긴다() throws Exception {
+    void 실제_MySQL에서_V3_레거시_데이터를_V12까지_안전하게_옮긴다() throws Exception {
         migrateToV3();
         LegacyRows legacy = insertLegacyRows();
 
@@ -168,14 +168,25 @@ class MySqlMigrationIntegrationTest {
     private void verifyFlywayHistory() throws SQLException {
         assertThat(queryLong("""
                 SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1
-                """)).isEqualTo(10);
+                """)).isEqualTo(12);
         assertThat(queryLong("""
                 SELECT COUNT(*) FROM flyway_schema_history WHERE success = 0
                 """)).isZero();
         assertThat(queryString("""
                 SELECT version FROM flyway_schema_history
                 WHERE success = 1 ORDER BY installed_rank DESC LIMIT 1
-                """)).isEqualTo("10");
+                """)).isEqualTo("12");
+        assertThat(queryLong("""
+                SELECT COUNT(DISTINCT index_name)
+                FROM information_schema.statistics
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'character_comment'
+                  AND index_name IN (
+                      'idx_character_comment_root_latest',
+                      'idx_character_comment_root_best',
+                      'idx_character_comment_author_guard'
+                  )
+                """)).isEqualTo(3);
     }
 
     private void verifyMembersAndProviders(LegacyRows legacy) throws SQLException {

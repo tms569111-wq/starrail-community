@@ -27,6 +27,13 @@ import static org.mockito.Mockito.when;
 class CommentServiceTest {
 
     @Test
+    void 댓글_페이지_번호는_DB에_큰_offset을_만들지_않도록_제한한다() {
+        assertThat(CommentService.boundedPageNumber(-1)).isZero();
+        assertThat(CommentService.boundedPageNumber(7)).isEqualTo(7);
+        assertThat(CommentService.boundedPageNumber(Integer.MAX_VALUE)).isEqualTo(100);
+    }
+
+    @Test
     void 자신의_댓글은_추천할_수_없다() {
         CharacterCommentRepository commentRepository = mock(CharacterCommentRepository.class);
         CharacterComment comment = mock(CharacterComment.class);

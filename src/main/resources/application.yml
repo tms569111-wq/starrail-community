@@ -5,6 +5,13 @@ spring:
     url: ${DB_URL:jdbc:mysql://localhost:3306/starrail_hearing?serverTimezone=UTC&characterEncoding=UTF-8}
     username: ${DB_USERNAME:oracle_app}
     password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAXIMUM_SIZE:10}
+      minimum-idle: ${DB_POOL_MINIMUM_IDLE:2}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT_MS:3000}
+      validation-timeout: 1000
+      idle-timeout: 600000
+      max-lifetime: 1800000
   security:
     oauth2:
       client:
@@ -21,6 +28,10 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+      jakarta:
+        persistence:
+          query:
+            timeout: ${DB_QUERY_TIMEOUT_MS:10000}
   flyway:
     enabled: true
   servlet:
@@ -40,12 +51,20 @@ server:
   shutdown: graceful
   servlet:
     session:
+      timeout: ${SESSION_TIMEOUT:30m}
       cookie:
         http-only: true
         same-site: lax
   error:
     whitelabel:
       enabled: false
+  tomcat:
+    connection-timeout: ${SERVER_CONNECTION_TIMEOUT:5s}
+    max-connections: ${SERVER_MAX_CONNECTIONS:500}
+    accept-count: ${SERVER_ACCEPT_COUNT:100}
+    threads:
+      max: ${SERVER_MAX_THREADS:100}
+      min-spare: 10
 
 management:
   endpoints:

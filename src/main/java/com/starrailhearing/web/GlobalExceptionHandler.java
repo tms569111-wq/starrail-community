@@ -4,11 +4,13 @@ import com.starrailhearing.common.exception.AppException;
 import com.starrailhearing.common.exception.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.TransientDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.transaction.CannotCreateTransactionException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -39,6 +41,16 @@ public class GlobalExceptionHandler {
                 ErrorCode.TITLE_IMAGE_INVALID.status().value(),
                 ErrorCode.TITLE_IMAGE_INVALID.name(),
                 "인증 이미지는 700KB 이하여야 합니다."
+        );
+    }
+
+    @ExceptionHandler({CannotCreateTransactionException.class, TransientDataAccessException.class})
+    ModelAndView handleServiceBusy(Exception exception) {
+        log.warn("Temporary database capacity failure type={}", exception.getClass().getSimpleName());
+        return error(
+                ErrorCode.SERVICE_BUSY.status().value(),
+                ErrorCode.SERVICE_BUSY.name(),
+                ErrorCode.SERVICE_BUSY.defaultMessage()
         );
     }
 

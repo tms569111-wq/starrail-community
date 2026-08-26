@@ -89,7 +89,7 @@ public class TitleRequestPersistenceService {
 
     public List<TitleRequestView> memberViews(long memberId) {
         memberService.requireReadable(memberId);
-        return repository.findAllByMember_IdOrderByCreatedAtDesc(memberId).stream()
+        return repository.findTop20ByMember_IdOrderByCreatedAtDesc(memberId).stream()
                 .map(this::toView).toList();
     }
 
@@ -152,12 +152,17 @@ public class TitleRequestPersistenceService {
     @Transactional
     public List<EvidenceCleanup> expirePending() {
         LocalDateTime now = LocalDateTime.now(clock);
-        return repository.findByStatusAndExpiresAtLessThanEqual(TitleRequestStatus.PENDING, now)
+        return repository.findTop100ByStatusAndExpiresAtLessThanEqualOrderByIdAsc(
+                        TitleRequestStatus.PENDING,
+                        now
+                )
                 .stream().map(request -> new EvidenceCleanup(request.getId(), request.expire(now))).toList();
     }
 
     public List<EvidenceCleanup> pendingEvidenceCleanup() {
-        return repository.findByPrivateImagePathIsNotNullAndStatusNot(TitleRequestStatus.PENDING)
+        return repository.findTop100ByPrivateImagePathIsNotNullAndStatusNotOrderByIdAsc(
+                        TitleRequestStatus.PENDING
+                )
                 .stream().map(request -> new EvidenceCleanup(
                         request.getId(), request.getPrivateImagePath()
                 )).toList();

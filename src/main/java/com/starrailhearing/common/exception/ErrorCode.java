@@ -33,6 +33,7 @@ public enum ErrorCode {
     PROFILE_REQUEST_THROTTLED(HttpStatus.TOO_MANY_REQUESTS, "현재 프로필 조회 요청이 많습니다. 잠시 후 다시 시도해 주세요."),
     PROFILE_UPSTREAM_THROTTLED(HttpStatus.SERVICE_UNAVAILABLE, "게임 프로필 서버 요청이 몰리고 있습니다. 잠시 후 다시 시도해 주세요."),
     UPSTREAM_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "게임 프로필 서버가 잠시 응답하지 않습니다."),
+    SERVICE_BUSY(HttpStatus.SERVICE_UNAVAILABLE, "현재 요청이 많아 처리가 지연되고 있습니다. 잠시 후 다시 시도해 주세요."),
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
     COMMENT_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "자신의 댓글만 수정하거나 삭제할 수 있습니다."),
     COMMENT_COUNT_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "댓글을 너무 많이 작성하셨습니다!"),

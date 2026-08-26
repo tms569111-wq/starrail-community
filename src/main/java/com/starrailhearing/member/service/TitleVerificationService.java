@@ -1,5 +1,7 @@
 package com.starrailhearing.member.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -9,6 +11,8 @@ import java.util.List;
 
 @Service
 public class TitleVerificationService {
+    private static final Logger log = LoggerFactory.getLogger(TitleVerificationService.class);
+
     private final TitleImageStorage storage;
     private final TitleRequestPersistenceService persistenceService;
 
@@ -59,8 +63,14 @@ public class TitleVerificationService {
     }
 
     private void deleteAndClear(TitleRequestPersistenceService.EvidenceCleanup cleanup) {
-        if (storage.delete(cleanup.path())) {
-            persistenceService.clearEvidence(cleanup.requestId(), cleanup.path());
+        try {
+            if (storage.delete(cleanup.path())) {
+                persistenceService.clearEvidence(cleanup.requestId(), cleanup.path());
+            } else {
+                log.warn("Title evidence deletion will be retried requestId={}", cleanup.requestId());
+            }
+        } catch (RuntimeException exception) {
+            log.error("Title evidence cleanup failed requestId={}", cleanup.requestId(), exception);
         }
     }
 
