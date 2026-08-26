@@ -41,6 +41,7 @@ public class ProfileVerificationService {
 
     public ProfileSyncResult verifyUid(long memberId, String rawUid) {
         String uid = validateUid(rawUid);
+        persistenceService.requireUidAvailableForMember(memberId, uid);
         PublicGameProfile publicProfile = fetchWithReservation(memberId, uid, false);
         requireCharacters(publicProfile);
         LocalDateTime now = LocalDateTime.now(clock);
