@@ -28,18 +28,21 @@ public interface TitleVerificationRequestRepository
     @EntityGraph(attributePaths = {"member", "reviewedBy"})
     List<TitleVerificationRequest> findAllByMember_IdOrderByCreatedAtDesc(Long memberId);
 
+    @EntityGraph(attributePaths = {"member", "reviewedBy"})
+    List<TitleVerificationRequest> findTop20ByMember_IdOrderByCreatedAtDesc(Long memberId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"member", "reviewedBy"})
     @Query("select r from TitleVerificationRequest r where r.id = :id")
     Optional<TitleVerificationRequest> findForUpdate(@Param("id") Long id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    List<TitleVerificationRequest> findByStatusAndExpiresAtLessThanEqual(
+    List<TitleVerificationRequest> findTop100ByStatusAndExpiresAtLessThanEqualOrderByIdAsc(
             TitleRequestStatus status,
             LocalDateTime now
     );
 
-    List<TitleVerificationRequest> findByPrivateImagePathIsNotNullAndStatusNot(
+    List<TitleVerificationRequest> findTop100ByPrivateImagePathIsNotNullAndStatusNotOrderByIdAsc(
             TitleRequestStatus status
     );
 

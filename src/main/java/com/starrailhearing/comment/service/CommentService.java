@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 public class CommentService {
 
     private static final int PAGE_SIZE = 20;
+    private static final int MAX_PAGE_NUMBER = 100;
     private static final String LIMITED_COMMENT_VERSION = "4.5";
     private static final long MAX_ROOT_COMMENTS_PER_CHARACTER = 10;
 
@@ -165,7 +166,7 @@ public class CommentService {
         CharacterEvaluation evaluation = evaluationReader.requireEvaluation(
                 character.getId(), version.getId()
         );
-        int pageNumber = Math.max(0, requestedPage);
+        int pageNumber = boundedPageNumber(requestedPage);
         Page<CharacterComment> page = commentRepository.findVisibleRoots(
                 evaluation.getId(), filter.getMinimum(), filter.getMaximum(),
                 PageRequest.of(pageNumber, PAGE_SIZE, sort.toSort())
@@ -209,6 +210,10 @@ public class CommentService {
                 writerEligible && verified != null,
                 verified == null ? null : verified.getEidolon()
         );
+    }
+
+    static int boundedPageNumber(int requestedPage) {
+        return Math.min(MAX_PAGE_NUMBER, Math.max(0, requestedPage));
     }
 
     public ReplyThreadView replies(

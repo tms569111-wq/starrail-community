@@ -93,6 +93,9 @@ class MySqlConcurrencyIntegrationTest {
         assertThat(indexExists("character_vote", "uq_character_vote_member_poll")).isTrue();
         assertThat(indexExists("comment_like", "uq_comment_like_member_comment")).isTrue();
         assertThat(indexExists("title_verification_request", "uq_title_request_pending")).isTrue();
+        assertThat(indexExists("character_comment", "idx_character_comment_root_latest")).isTrue();
+        assertThat(indexExists("character_comment", "idx_character_comment_root_best")).isTrue();
+        assertThat(indexExists("character_comment", "idx_character_comment_author_guard")).isTrue();
     }
 
     @Test
