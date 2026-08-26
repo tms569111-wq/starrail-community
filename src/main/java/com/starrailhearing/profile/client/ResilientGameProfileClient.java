@@ -92,7 +92,7 @@ public class ResilientGameProfileClient implements GameProfileClient {
                 );
 
                 if (errorCode == ErrorCode.UPSTREAM_UNAVAILABLE
-                        || errorCode == ErrorCode.PROFILE_SYNC_COOLDOWN) {
+                        || errorCode == ErrorCode.PROFILE_UPSTREAM_THROTTLED) {
                     circuit.failure(now, properties.circuitFailureThreshold(),
                             properties.circuitOpenDuration());
                     log.warn(
