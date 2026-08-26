@@ -26,7 +26,9 @@ public interface TitleVerificationRequestRepository
     List<TitleVerificationRequest> findTop100ByOrderByCreatedAtDesc();
 
     @EntityGraph(attributePaths = {"member", "reviewedBy"})
-    List<TitleVerificationRequest> findAllByMember_IdOrderByCreatedAtDesc(Long memberId);
+    List<TitleVerificationRequest> findTop100ByMember_IdOrderByCreatedAtDesc(Long memberId);
+
+    List<TitleVerificationRequest> findByMember_IdAndPrivateImagePathIsNotNull(Long memberId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"member", "reviewedBy"})
@@ -34,12 +36,12 @@ public interface TitleVerificationRequestRepository
     Optional<TitleVerificationRequest> findForUpdate(@Param("id") Long id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    List<TitleVerificationRequest> findByStatusAndExpiresAtLessThanEqual(
+    List<TitleVerificationRequest> findTop100ByStatusAndExpiresAtLessThanEqualOrderByIdAsc(
             TitleRequestStatus status,
             LocalDateTime now
     );
 
-    List<TitleVerificationRequest> findByPrivateImagePathIsNotNullAndStatusNot(
+    List<TitleVerificationRequest> findTop100ByPrivateImagePathIsNotNullAndStatusNotOrderByIdAsc(
             TitleRequestStatus status
     );
 

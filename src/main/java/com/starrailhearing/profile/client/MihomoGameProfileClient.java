@@ -80,7 +80,8 @@ public class MihomoGameProfileClient implements ProfileProviderClient {
                 player.path("nickname").asString("이름 없음"),
                 player.path("signature").asString(""),
                 player.path("is_display").asBoolean(false),
-                List.copyOf(characters)
+                List.copyOf(characters),
+                Math.max(0, root.path("ttl").asLong(0))
         );
     }
 }

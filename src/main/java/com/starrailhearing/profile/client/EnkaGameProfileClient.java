@@ -55,7 +55,7 @@ public class EnkaGameProfileClient implements ProfileProviderClient {
         }
     }
 
-    private PublicGameProfile parse(JsonNode root, String requestedUid) {
+    PublicGameProfile parse(JsonNode root, String requestedUid) {
         if (root == null) {
             log.warn("Enka profile response was empty");
             throw new AppException(ErrorCode.PROFILE_LOOKUP_FAILED);
@@ -94,7 +94,8 @@ public class EnkaGameProfileClient implements ProfileProviderClient {
                 player.path("isDisplayAvatar").asBoolean(
                         player.path("is_display").asBoolean(!characters.isEmpty())
                 ),
-                List.copyOf(characters)
+                List.copyOf(characters),
+                Math.max(0, root.path("ttl").asLong(0))
         );
     }
 

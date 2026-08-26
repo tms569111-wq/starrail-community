@@ -15,6 +15,10 @@ services:
       APP_PLATINUM_COLOR: "${APP_PLATINUM_COLOR:-#8DE9FF}"
       MIHOMO_USER_AGENT: "${MIHOMO_USER_AGENT:?MIHOMO_USER_AGENT is required}"
       ENKA_USER_AGENT: "${ENKA_USER_AGENT:?ENKA_USER_AGENT is required}"
+      PROFILE_REDIS_CACHE_ENABLED: "true"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_DATA_REDIS_PASSWORD: "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
       TITLE_PRIVATE_UPLOAD_DIR: /app/private-uploads/title-verification
       SPRING_THYMELEAF_CACHE: "${SPRING_THYMELEAF_CACHE:-true}"
       SERVER_FORWARD_HEADERS_STRATEGY: "${SERVER_FORWARD_HEADERS_STRATEGY:-framework}"
@@ -30,6 +34,29 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - >-
+        exec redis-server --save '' --appendonly no
+        --maxmemory 128mb --maxmemory-policy allkeys-lru
+        --requirepass "$$REDIS_PASSWORD"
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
 volumes:
   title-uploads:
