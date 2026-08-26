@@ -87,7 +87,14 @@
                      th:classappend="| tier-lane--${row.key}|">
                 <header class="tier-lane__rank">
                     <strong th:text="${row.label}">T0</strong>
-                    <span th:text="${row.description}">환경 파괴자</span>
+                    <span th:switch="${row.key}">
+                        <th:block th:case="'t0'">류웨이 아들딸</th:block>
+                        <th:block th:case="'t05'">스타레일 고수</th:block>
+                        <th:block th:case="'t1'">가성비 GOAT</th:block>
+                        <th:block th:case="'t15'">개꿀잼 라인</th:block>
+                        <th:block th:case="'t2'">애정의 영역</th:block>
+                        <th:block th:case="*" th:text="${row.description}">최소 표본 집계 전</th:block>
+                    </span>
                 </header>
                 <div class="tier-lane__characters" th:if="${!row.characters.isEmpty()}">
                     <a class="tier-character"
