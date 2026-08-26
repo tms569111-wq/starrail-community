@@ -33,10 +33,11 @@ class MemberAccountTest {
     }
 
     @Test
-    void 구글_실명과_무관하게_최초_닉네임_설정이_필요하다() {
+    void 구글_회원은_임시_닉네임으로_바로_이용할_수_있다() {
         MemberAccount member = MemberAccount.google("stable-sub", "user@example.com", "개척자-ABC123");
 
-        assertThat(member.isNicknameConfigured()).isFalse();
+        assertThat(member.isNicknameConfigured()).isTrue();
+        assertThat(member.canChangeNickname(LocalDateTime.now(), java.time.Duration.ofDays(30))).isTrue();
     }
 
     @Test

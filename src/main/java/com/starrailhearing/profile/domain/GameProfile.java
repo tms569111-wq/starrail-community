@@ -62,6 +62,9 @@ public class GameProfile extends BaseTimeEntity {
     @Column(name = "last_synced_at")
     private LocalDateTime lastSyncedAt;
 
+    @Column(name = "next_lookup_at")
+    private LocalDateTime nextLookupAt;
+
     protected GameProfile() {
     }
 
@@ -87,6 +90,24 @@ public class GameProfile extends BaseTimeEntity {
         verificationStatus = ProfileVerificationStatus.PENDING;
         challengeCode = code;
         challengeExpiresAt = expiresAt;
+    }
+
+    public void reserveLookup(String requestedUid, LocalDateTime nextAllowedAt) {
+        if (isVerified() && !uid.equals(requestedUid)) {
+            throw new IllegalStateException("인증된 UID는 변경할 수 없습니다.");
+        }
+        if (!isVerified()) {
+            uid = requestedUid;
+            profileNickname = "확인 중";
+            profileSignature = "";
+            challengeCode = null;
+            challengeExpiresAt = null;
+        }
+        nextLookupAt = nextAllowedAt;
+    }
+
+    public void reserveRefresh(LocalDateTime nextAllowedAt) {
+        nextLookupAt = nextAllowedAt;
     }
 
     public void completeVerification(
@@ -155,6 +176,10 @@ public class GameProfile extends BaseTimeEntity {
 
     public LocalDateTime getLastSyncedAt() {
         return lastSyncedAt;
+    }
+
+    public LocalDateTime getNextLookupAt() {
+        return nextLookupAt;
     }
 
     public boolean isVerified() {

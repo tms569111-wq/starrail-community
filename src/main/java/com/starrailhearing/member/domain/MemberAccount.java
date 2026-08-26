@@ -83,7 +83,7 @@ public class MemberAccount extends BaseTimeEntity {
         member.authProvider = AuthProvider.GOOGLE;
         member.providerUserId = normalizeRequired(providerUserId, "Google 사용자 식별자는 필수입니다.");
         member.email = normalizeEmail(email);
-        member.nicknameConfigured = false;
+        member.nicknameConfigured = true;
         return member;
     }
 

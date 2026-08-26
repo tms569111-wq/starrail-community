@@ -134,18 +134,14 @@ class MySqlConcurrencyIntegrationTest {
         MemberAccount member = member("일괄조회");
         LocalDateTime first = LocalDateTime.of(2026, 8, 18, 10, 0);
         PublicGameProfile profile = profile("8" + String.format("%08d", member.getId() % 100_000_000));
-        profilePersistenceService.prepare(
-                member.getId(), profile.uid(), profile, "HSRH-BATCH1", first.plusMinutes(10)
+        profilePersistenceService.reserveLookup(
+                member.getId(), profile.uid(), first.minusMinutes(3), Duration.ofMinutes(3)
         );
-        profilePersistenceService.completeVerification(
-                member.getId(), "HSRH-BATCH1", profile, first
-        );
+        profilePersistenceService.completeLookup(member.getId(), profile.uid(), profile, first);
 
         Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
         statistics.clear();
-        profilePersistenceService.completeRefresh(
-                member.getId(), profile, first.plusMinutes(2), Duration.ZERO
-        );
+        profilePersistenceService.completeRefresh(member.getId(), profile, first.plusMinutes(2));
 
         assertThat(statistics.getQueryExecutionCount()).isLessThanOrEqualTo(5);
     }

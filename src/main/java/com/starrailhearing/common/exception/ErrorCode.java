@@ -29,7 +29,7 @@ public enum ErrorCode {
     PROFILE_LOOKUP_FAILED(HttpStatus.NOT_FOUND, "UID를 조회하지 못했습니다. UID를 확인하고 잠시 후 다시 시도해 주세요."),
     PROFILE_NOT_PUBLIC(HttpStatus.UNPROCESSABLE_CONTENT, "UID는 확인했지만 전시 캐릭터를 불러오지 못했습니다. 게임에서 캐릭터 상세 정보 표시를 켜고 전시 캐릭터를 등록해 주세요."),
     CHARACTER_NOT_VERIFIED(HttpStatus.FORBIDDEN, "보유 인증된 캐릭터만 참여할 수 있습니다."),
-    PROFILE_SYNC_COOLDOWN(HttpStatus.TOO_MANY_REQUESTS, "잠시 후 캐릭터를 다시 불러와 주세요."),
+    PROFILE_SYNC_COOLDOWN(HttpStatus.TOO_MANY_REQUESTS, "너무 시도가 잦습니다. 3분 뒤 다시 시도해 주세요."),
     UPSTREAM_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "게임 프로필 서버가 잠시 응답하지 않습니다."),
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),
     COMMENT_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "자신의 댓글만 수정하거나 삭제할 수 있습니다."),
