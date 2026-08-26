@@ -76,7 +76,7 @@ public class EnkaGameProfileClient implements ProfileProviderClient {
             JsonNode filledByOtherRequest = waitForCache(uid);
             if (filledByOtherRequest != null) return parse(filledByOtherRequest, uid);
             throw new AppException(
-                    ErrorCode.PROFILE_SYNC_COOLDOWN,
+                    ErrorCode.PROFILE_REQUEST_THROTTLED,
                     "같은 UID를 조회 중입니다. 잠시 후 다시 시도해 주세요."
             );
         }
@@ -191,10 +191,7 @@ public class EnkaGameProfileClient implements ProfileProviderClient {
             Long count = redis.opsForValue().increment(key);
             if (count != null && count == 1L) redis.expire(key, Duration.ofSeconds(2));
             if (count != null && count > maxRequestsPerSecond) {
-                throw new AppException(
-                        ErrorCode.PROFILE_SYNC_COOLDOWN,
-                        "프로필 조회가 몰리고 있습니다. 잠시 후 다시 시도해 주세요."
-                );
+                throw new AppException(ErrorCode.PROFILE_REQUEST_THROTTLED);
             }
             return;
         } catch (AppException exception) {
@@ -206,10 +203,7 @@ public class EnkaGameProfileClient implements ProfileProviderClient {
         long previous = localRateSecond.getAndSet(second);
         if (previous != second) localRateCount.set(0);
         if (localRateCount.incrementAndGet() > maxRequestsPerSecond) {
-            throw new AppException(
-                    ErrorCode.PROFILE_SYNC_COOLDOWN,
-                    "프로필 조회가 몰리고 있습니다. 잠시 후 다시 시도해 주세요."
-            );
+            throw new AppException(ErrorCode.PROFILE_REQUEST_THROTTLED);
         }
     }
 
