@@ -50,6 +50,7 @@ public record AppProperties(
             URI baseUrl,
             String userAgent,
             Duration cacheDefaultTtl,
+            int cacheMaxEntries,
             int maxRequestsPerSecond,
             int maxConcurrentRequests,
             int maxWaitingRequests,
