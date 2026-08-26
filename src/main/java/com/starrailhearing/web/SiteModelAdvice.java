@@ -36,6 +36,7 @@ public class SiteModelAdvice {
                         member.getNickname(),
                         member.isAdmin(),
                         member.isActive() && member.isNicknameConfigured(),
+                        member.isActive(),
                         member.isNicknameConfigured(),
                         badgeService.find(member.getId(), properties.operator().platinumVersion())
                 ))

@@ -51,6 +51,9 @@ public class MemberAccount extends BaseTimeEntity {
     @Column(name = "nickname_changed_at")
     private LocalDateTime nicknameChangedAt;
 
+    @Column(name = "profile_fetch_available_at")
+    private LocalDateTime profileFetchAvailableAt;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private MemberStatus status;
@@ -170,6 +173,17 @@ public class MemberAccount extends BaseTimeEntity {
                 || !now.isBefore(nicknameChangedAt.plus(cooldown));
     }
 
+    public boolean canFetchProfile(LocalDateTime now) {
+        return profileFetchAvailableAt == null || !now.isBefore(profileFetchAvailableAt);
+    }
+
+    public void reserveProfileFetch(LocalDateTime now, Duration cooldown) {
+        if (now == null || cooldown == null || cooldown.isNegative() || cooldown.isZero()) {
+            throw new IllegalArgumentException("프로필 조회 제한 시간을 확인해 주세요.");
+        }
+        profileFetchAvailableAt = now.plus(cooldown);
+    }
+
     public boolean isAdmin() {
         return role == MemberRole.ADMIN;
     }
@@ -211,6 +225,7 @@ public class MemberAccount extends BaseTimeEntity {
     public String getNicknameNormalized() { return nicknameNormalized; }
     public boolean isNicknameConfigured() { return nicknameConfigured; }
     public LocalDateTime getNicknameChangedAt() { return nicknameChangedAt; }
+    public LocalDateTime getProfileFetchAvailableAt() { return profileFetchAvailableAt; }
 
     public MemberStatus getStatus() {
         return status;

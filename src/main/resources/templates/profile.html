@@ -13,18 +13,34 @@
         <p>UID로 공개 프로필을 확인하고, 전시 캐릭터를 누적합니다.</p>
     </div>
 
+    <div class="profile-onboarding-notice"
+         th:if="${currentUser.canManageProfile and !currentUser.nicknameConfigured}">
+        <strong>닉네임은 나중에 정해도 됩니다.</strong>
+        <p><b th:text="${currentUser.nickname}">개척자-임시닉네임</b>으로 먼저 UID를 인증할 수 있습니다.
+            투표와 댓글을 쓰기 전까지만 내 계정에서 원하는 닉네임으로 바꿔 주세요.</p>
+    </div>
+
     <div class="flash flash--success" th:if="${successMessage}" th:text="${successMessage}"></div>
     <div class="flash flash--error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+    <div class="profile-cooldown" th:if="${profile.fetchCooldownSeconds > 0}"
+         th:attr="data-profile-cooldown=${profile.fetchCooldownSeconds}">
+        <strong>너무 시도가 잦습니다.</strong>
+        <span><b data-profile-countdown>03:00</b> 뒤 다시 시도해 주십시오!</span>
+    </div>
 
     <section class="profile-panel" th:if="${!profile.exists}">
         <div class="step-number">01</div>
         <div>
-            <h2>게임 UID 입력</h2>
-            <p>공개 프로필의 닉네임과 UID를 확인합니다. UID는 숫자 9자리입니다.</p>
-            <form class="uid-form" th:if="${currentUser.canWrite}" method="post" th:action="@{/me/profile/challenge}">
+            <h2>지금 바로 게임 UID 인증</h2>
+            <p>숫자 9자리 UID를 입력하면 공개 프로필과 전시 캐릭터를 한 번에 가져옵니다.</p>
+            <form class="uid-form" th:if="${currentUser.canManageProfile}" method="post"
+                  th:action="@{/me/profile/challenge}" data-profile-fetch-form>
                 <input type="text" name="uid" inputmode="numeric" pattern="[0-9]{9}" maxlength="9"
                        placeholder="예: 800000000" required>
-                <button class="button button--primary" type="submit">프로필 찾기</button>
+                <button class="button button--primary" type="submit" data-profile-fetch-button
+                        data-loading-text="캐릭터 정보를 가져오는 중입니다…"
+                        th:disabled="${profile.fetchCooldownSeconds > 0}">UID로 캐릭터 인증</button>
             </form>
         </div>
     </section>
@@ -49,8 +65,11 @@
                 <li>전시 캐릭터와 지원 캐릭터를 공개 상태로 설정</li>
                 <li>아래 버튼을 눌러 인증과 캐릭터 등록 완료</li>
             </ol>
-            <form method="post" th:if="${currentUser.canWrite}" th:action="@{/me/profile/verify}">
-                <button class="button button--primary" type="submit">캐릭터 인증 완료</button>
+            <form method="post" th:if="${currentUser.canManageProfile}" th:action="@{/me/profile/verify}"
+                  data-profile-fetch-form>
+                <button class="button button--primary" type="submit" data-profile-fetch-button
+                        data-loading-text="캐릭터 정보를 가져오는 중입니다…"
+                        th:disabled="${profile.fetchCooldownSeconds > 0}">캐릭터 인증 완료</button>
             </form>
         </div>
     </section>
@@ -67,8 +86,12 @@
                 <strong th:text="${profile.characters.size()}">0</strong>
                 <span>누적 인증 캐릭터</span>
             </div>
-            <form method="post" th:if="${currentUser.canWrite}" th:action="@{/me/profile/refresh}">
-                <button class="button button--secondary" type="submit">현재 8명 다시 불러오기</button>
+            <form method="post" th:if="${currentUser.canManageProfile}" th:action="@{/me/profile/refresh}"
+                  data-profile-fetch-form>
+                <button class="button button--secondary" type="submit" data-profile-fetch-button
+                        data-loading-text="캐릭터 정보를 가져오는 중입니다…"
+                        th:disabled="${profile.fetchCooldownSeconds > 0}"
+                        th:text="|현재 ${profile.characters.size()}명 다시 불러오기|">현재 캐릭터 다시 불러오기</button>
             </form>
         </div>
 
@@ -94,8 +117,8 @@
             </a>
         </div>
     </section>
-    <div class="locked-comment" th:if="${!currentUser.canWrite}">
-        UID 인증·갱신 전에 <a th:href="@{/me/account}">닉네임 설정 또는 작성 제한 상태</a>를 확인해 주세요.
+    <div class="locked-comment" th:if="${!currentUser.canManageProfile}">
+        현재 계정은 UID 인증·갱신을 할 수 없습니다. <a th:href="@{/me/account}">계정 상태</a>를 확인해 주세요.
     </div>
 </main>
 

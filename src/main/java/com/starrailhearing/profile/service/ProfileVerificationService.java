@@ -15,7 +15,6 @@ import java.time.LocalDateTime;
 public class ProfileVerificationService {
 
     private static final String UID_PATTERN = "\\d{9}";
-    private static final String VERIFICATION_STATE_TOKEN = "PROFILE_VERIFICATION";
 
     private final ProfilePersistenceService persistenceService;
     private final MemberService memberService;
@@ -37,28 +36,22 @@ public class ProfileVerificationService {
         this.clock = clock;
     }
 
-    public ProfileChallengeView prepare(long memberId, String rawUid) {
-        memberService.requireActiveForWrite(memberId);
+    public ProfileSyncResult verifyUid(long memberId, String rawUid) {
         String uid = validateUid(rawUid);
+        memberService.reserveProfileFetch(memberId, properties.mihomo().syncCooldown());
         PublicGameProfile publicProfile = profileClient.fetch(uid, false);
+        requireCharacters(publicProfile);
         LocalDateTime now = LocalDateTime.now(clock);
-        LocalDateTime expiresAt = now.plus(properties.mihomo().challengeTtl());
-
-        return persistenceService.prepare(
-                memberId,
-                uid,
-                publicProfile,
-                VERIFICATION_STATE_TOKEN,
-                expiresAt
-        );
+        return persistenceService.bindAndVerify(memberId, uid, publicProfile, now);
     }
 
     public ProfileSyncResult verify(long memberId) {
-        memberService.requireActiveForWrite(memberId);
+        memberService.requireActive(memberId);
         ProfileVerificationContext context = persistenceService.verificationContext(
                 memberId,
                 LocalDateTime.now(clock)
         );
+        memberService.reserveProfileFetch(memberId, properties.mihomo().syncCooldown());
         PublicGameProfile publicProfile = profileClient.fetch(context.uid(), true);
         requireCharacters(publicProfile);
 
@@ -71,12 +64,13 @@ public class ProfileVerificationService {
     }
 
     public ProfileSyncResult refresh(long memberId) {
-        memberService.requireActiveForWrite(memberId);
+        memberService.requireActive(memberId);
         ProfileRefreshContext context = persistenceService.refreshContext(
                 memberId,
                 LocalDateTime.now(clock),
                 properties.mihomo().syncCooldown()
         );
+        memberService.reserveProfileFetch(memberId, properties.mihomo().syncCooldown());
         PublicGameProfile publicProfile = profileClient.fetch(context.uid(), true);
         requireCharacters(publicProfile);
 
@@ -89,7 +83,7 @@ public class ProfileVerificationService {
     }
 
     public ProfilePageView view(long memberId) {
-        return persistenceService.view(memberId);
+        return persistenceService.view(memberId, LocalDateTime.now(clock));
     }
 
     private void requireCharacters(PublicGameProfile publicProfile) {

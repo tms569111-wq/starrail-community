@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Locale;
 
@@ -46,18 +47,16 @@ public class MemberService {
 
     @Transactional
     public MemberAccount requireActive(long memberId) {
-        return requireActiveForWrite(memberId);
+        MemberAccount member = requireActiveLocked(memberId);
+        if (!member.isActive()) {
+            throw new AppException(ErrorCode.ACCOUNT_NOT_ACTIVE);
+        }
+        return member;
     }
 
     @Transactional
     public MemberAccount requireActiveForWrite(long memberId) {
-        MemberAccount member = repository.findForUpdateById(memberId)
-                .orElseThrow(() -> new AppException(ErrorCode.MEMBER_NOT_FOUND));
-        LocalDateTime now = LocalDateTime.now(clock);
-        member.restoreIfExpired(now);
-        if (!member.isActive()) {
-            throw new AppException(ErrorCode.ACCOUNT_NOT_ACTIVE);
-        }
+        MemberAccount member = requireActive(memberId);
         if (!member.isNicknameConfigured()) {
             throw new AppException(ErrorCode.NICKNAME_SETUP_REQUIRED);
         }
@@ -66,13 +65,23 @@ public class MemberService {
 
     @Transactional
     public MemberAccount requireActiveForWriteLocked(long memberId) {
-        MemberAccount member = repository.findForUpdateById(memberId)
-                .orElseThrow(() -> new AppException(ErrorCode.MEMBER_NOT_FOUND));
-        LocalDateTime now = LocalDateTime.now(clock);
-        member.restoreIfExpired(now);
-        if (!member.isActive()) throw new AppException(ErrorCode.ACCOUNT_NOT_ACTIVE);
+        MemberAccount member = requireActive(memberId);
         if (!member.isNicknameConfigured()) throw new AppException(ErrorCode.NICKNAME_SETUP_REQUIRED);
         return member;
+    }
+
+    @Transactional
+    public LocalDateTime reserveProfileFetch(long memberId, Duration cooldown) {
+        MemberAccount member = requireActiveLocked(memberId);
+        LocalDateTime now = LocalDateTime.now(clock);
+        if (!member.isActive()) {
+            throw new AppException(ErrorCode.ACCOUNT_NOT_ACTIVE);
+        }
+        if (!member.canFetchProfile(now)) {
+            throw new AppException(ErrorCode.PROFILE_SYNC_COOLDOWN);
+        }
+        member.reserveProfileFetch(now, cooldown);
+        return member.getProfileFetchAvailableAt();
     }
 
     @Transactional
@@ -223,6 +232,13 @@ public class MemberService {
             candidate = base + "-" + sequence++;
         }
         return candidate;
+    }
+
+    private MemberAccount requireActiveLocked(long memberId) {
+        MemberAccount member = repository.findForUpdateById(memberId)
+                .orElseThrow(() -> new AppException(ErrorCode.MEMBER_NOT_FOUND));
+        member.restoreIfExpired(LocalDateTime.now(clock));
+        return member;
     }
 
     private String requireText(String value, String message) {

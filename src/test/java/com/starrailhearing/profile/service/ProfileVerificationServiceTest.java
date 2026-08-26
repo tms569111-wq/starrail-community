@@ -17,9 +17,14 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,34 +33,29 @@ class ProfileVerificationServiceTest {
     private static final long MEMBER_ID = 1L;
     private static final String UID = "826149992";
     private static final String VERIFICATION_STATE_TOKEN = "PROFILE_VERIFICATION";
-    private static final Duration SYNC_COOLDOWN = Duration.ofMinutes(1);
+    private static final Duration SYNC_COOLDOWN = Duration.ofMinutes(3);
     private static final Clock CLOCK = Clock.fixed(
             Instant.parse("2026-08-23T00:00:00Z"),
             ZoneOffset.UTC
     );
 
     @Test
-    void UID_최초_등록은_소개문과_무관하게_통과한다() {
+    void UID_입력_한_번으로_소개문과_무관하게_캐릭터까지_인증한다() {
         Fixture fixture = new Fixture();
         PublicGameProfile profile = profile("평범한 소개문");
-        ProfileChallengeView expected = new ProfileChallengeView(
-                UID,
-                profile.nickname(),
-                VERIFICATION_STATE_TOKEN,
-                LocalDateTime.now(CLOCK).plusMinutes(10)
-        );
+        ProfileSyncResult expected = new ProfileSyncResult(1, 1, 0, 0);
         when(fixture.profileClient.fetch(UID, false)).thenReturn(profile);
-        when(fixture.persistenceService.prepare(
+        when(fixture.persistenceService.bindAndVerify(
                 eq(MEMBER_ID),
                 eq(UID),
                 eq(profile),
-                eq(VERIFICATION_STATE_TOKEN),
                 any(LocalDateTime.class)
         )).thenReturn(expected);
 
-        ProfileChallengeView actual = fixture.service.prepare(MEMBER_ID, UID);
+        ProfileSyncResult actual = fixture.service.verifyUid(MEMBER_ID, UID);
 
         assertThat(actual).isSameAs(expected);
+        verify(fixture.memberService).reserveProfileFetch(MEMBER_ID, SYNC_COOLDOWN);
     }
 
     @Test
@@ -64,15 +64,26 @@ class ProfileVerificationServiceTest {
         PublicGameProfile profile = profile("");
         when(fixture.profileClient.fetch(UID, false)).thenReturn(profile);
 
-        fixture.service.prepare(MEMBER_ID, UID);
+        fixture.service.verifyUid(MEMBER_ID, UID);
 
-        verify(fixture.persistenceService).prepare(
+        verify(fixture.persistenceService).bindAndVerify(
                 eq(MEMBER_ID),
                 eq(UID),
                 eq(profile),
-                eq(VERIFICATION_STATE_TOKEN),
                 any(LocalDateTime.class)
         );
+    }
+
+    @Test
+    void 잘못된_UID는_외부_조회_제한을_소비하지_않는다() {
+        Fixture fixture = new Fixture();
+
+        assertThatThrownBy(() -> fixture.service.verifyUid(MEMBER_ID, "123"))
+                .isInstanceOf(com.starrailhearing.common.exception.AppException.class)
+                .hasMessageContaining("숫자 9자리");
+
+        verify(fixture.memberService, never()).reserveProfileFetch(anyLong(), any(Duration.class));
+        verify(fixture.profileClient, never()).fetch(anyString(), anyBoolean());
     }
 
     @Test
@@ -95,6 +106,7 @@ class ProfileVerificationServiceTest {
         ProfileSyncResult actual = fixture.service.verify(MEMBER_ID);
 
         assertThat(actual).isSameAs(expected);
+        verify(fixture.memberService).reserveProfileFetch(MEMBER_ID, SYNC_COOLDOWN);
     }
 
     @Test
@@ -118,6 +130,7 @@ class ProfileVerificationServiceTest {
         ProfileSyncResult actual = fixture.service.refresh(MEMBER_ID);
 
         assertThat(actual).isSameAs(expected);
+        verify(fixture.memberService).reserveProfileFetch(MEMBER_ID, SYNC_COOLDOWN);
     }
 
     private static PublicGameProfile profile(String signature) {

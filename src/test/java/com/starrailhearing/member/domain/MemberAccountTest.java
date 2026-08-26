@@ -2,6 +2,7 @@ package com.starrailhearing.member.domain;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,6 +38,19 @@ class MemberAccountTest {
         MemberAccount member = MemberAccount.google("stable-sub", "user@example.com", "개척자-ABC123");
 
         assertThat(member.isNicknameConfigured()).isFalse();
+    }
+
+    @Test
+    void 임시_닉네임_회원도_프로필_조회_대기시간을_예약할_수_있다() {
+        MemberAccount member = MemberAccount.google("stable-sub", "user@example.com", "개척자-ABC123");
+        LocalDateTime now = LocalDateTime.of(2026, 8, 26, 12, 0);
+
+        member.reserveProfileFetch(now, Duration.ofMinutes(3));
+
+        assertThat(member.isNicknameConfigured()).isFalse();
+        assertThat(member.canFetchProfile(now.plusMinutes(2))).isFalse();
+        assertThat(member.canFetchProfile(now.plusMinutes(3))).isTrue();
+        assertThat(member.getProfileFetchAvailableAt()).isEqualTo(now.plusMinutes(3));
     }
 
     @Test

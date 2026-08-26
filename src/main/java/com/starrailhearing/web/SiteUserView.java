@@ -7,6 +7,7 @@ public record SiteUserView(
         String nickname,
         boolean admin,
         boolean canWrite,
+        boolean canManageProfile,
         boolean nicknameConfigured,
         BadgeView badge
 ) {
