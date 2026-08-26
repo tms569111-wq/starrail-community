@@ -17,8 +17,13 @@ public class HttpClientConfig {
             RestClient.Builder builder,
             AppProperties properties
     ) {
-        return configured(builder, properties.mihomo().baseUrl().toString(),
-                properties.mihomo().userAgent());
+        return configured(
+                builder,
+                properties.mihomo().baseUrl().toString(),
+                properties.mihomo().userAgent(),
+                Duration.ofSeconds(3),
+                Duration.ofSeconds(8)
+        );
     }
 
     @Bean
@@ -26,20 +31,36 @@ public class HttpClientConfig {
             RestClient.Builder builder,
             AppProperties properties
     ) {
-        return configured(builder, properties.enka().baseUrl().toString(),
-                properties.enka().userAgent());
+        return configured(
+                builder,
+                properties.enka().baseUrl().toString(),
+                properties.enka().userAgent(),
+                positive(properties.enka().connectTimeout(), Duration.ofSeconds(3)),
+                positive(properties.enka().readTimeout(), Duration.ofSeconds(15))
+        );
     }
 
-    private RestClient configured(RestClient.Builder builder, String baseUrl, String userAgent) {
+    private RestClient configured(
+            RestClient.Builder builder,
+            String baseUrl,
+            String userAgent,
+            Duration connectTimeout,
+            Duration readTimeout
+    ) {
         HttpClient httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(3))
+                .connectTimeout(connectTimeout)
                 .build();
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
-        requestFactory.setReadTimeout(Duration.ofSeconds(8));
+        requestFactory.setReadTimeout(readTimeout);
         return builder.clone()
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.USER_AGENT, userAgent)
                 .requestFactory(requestFactory)
                 .build();
+    }
+
+    private Duration positive(Duration value, Duration fallback) {
+        if (value == null || value.isZero() || value.isNegative()) return fallback;
+        return value;
     }
 }

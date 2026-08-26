@@ -49,6 +49,8 @@ public record AppProperties(
     public record Enka(
             URI baseUrl,
             String userAgent,
+            Duration connectTimeout,
+            Duration readTimeout,
             Duration cacheDefaultTtl,
             int cacheMaxEntries,
             int maxRequestsPerSecond,

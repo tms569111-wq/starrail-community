@@ -80,7 +80,9 @@ app:
   enka:
     base-url: ${ENKA_BASE_URL:https://enka.network}
     user-agent: ${ENKA_USER_AGENT:StarrailHearing/0.1 contact=local-development}
-    # 아래 값들은 모두 재배포 시 환경변수만 바꿔 조정할 수 있습니다.
+    # 네트워크 제한도 운영 환경변수로 바꿀 수 있습니다.
+    connect-timeout: ${ENKA_CONNECT_TIMEOUT:3s}
+    read-timeout: ${ENKA_READ_TIMEOUT:15s}
     # Enka가 ttl을 누락했을 때만 쓰는 안전 기본값입니다. 실제 ttl이 있으면 그 값을 우선합니다.
     cache-default-ttl: ${ENKA_CACHE_DEFAULT_TTL:60s}
     cache-max-entries: ${ENKA_CACHE_MAX_ENTRIES:5000}

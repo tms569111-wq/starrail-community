@@ -13,6 +13,7 @@ import jakarta.persistence.UniqueConstraint;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "member_account", uniqueConstraints = {
@@ -181,11 +182,14 @@ public class MemberAccount extends BaseTimeEntity {
         if (now == null || cooldown == null || cooldown.isNegative() || cooldown.isZero()) {
             throw new IllegalArgumentException("프로필 조회 제한 시간을 확인해 주세요.");
         }
-        profileFetchAvailableAt = now.plus(cooldown);
+        profileFetchAvailableAt = now.truncatedTo(ChronoUnit.MICROS).plus(cooldown);
     }
 
     public void releaseProfileFetchReservation(LocalDateTime reservedUntil) {
-        if (reservedUntil != null && reservedUntil.equals(profileFetchAvailableAt)) {
+        if (reservedUntil == null || profileFetchAvailableAt == null) return;
+        LocalDateTime expected = reservedUntil.truncatedTo(ChronoUnit.MICROS);
+        LocalDateTime actual = profileFetchAvailableAt.truncatedTo(ChronoUnit.MICROS);
+        if (expected.equals(actual)) {
             profileFetchAvailableAt = null;
         }
     }
