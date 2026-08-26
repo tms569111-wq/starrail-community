@@ -22,6 +22,8 @@ import java.time.LocalDateTime;
 @Table(name = "character_comment")
 public class CharacterComment extends BaseTimeEntity {
 
+    private static final int MAX_CONTENT_LENGTH = 3000;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -42,7 +44,7 @@ public class CharacterComment extends BaseTimeEntity {
     @JoinColumn(name = "parent_comment_id")
     private CharacterComment parent;
 
-    @Column(nullable = false, length = 1000)
+    @Column(nullable = false, length = MAX_CONTENT_LENGTH)
     private String content;
 
     @Column(name = "eidolon_at_write", nullable = false)
@@ -126,8 +128,8 @@ public class CharacterComment extends BaseTimeEntity {
 
     private String normalizeContent(String value) {
         String normalized = value == null ? "" : value.trim();
-        if (normalized.isBlank() || normalized.length() > 1000) {
-            throw new IllegalArgumentException("댓글은 1~1000자여야 합니다.");
+        if (normalized.isBlank() || normalized.length() > MAX_CONTENT_LENGTH) {
+            throw new IllegalArgumentException("댓글은 1~3000자여야 합니다.");
         }
         return normalized;
     }
