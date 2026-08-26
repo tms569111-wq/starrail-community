@@ -7,10 +7,11 @@
 1. UID가 이미 다른 회원에게 연결되어 있으면 외부 API를 호출하기 전에 즉시 차단합니다.
 2. UID별 Enka TTL 캐시를 확인합니다.
 3. TTL이 살아 있으면 `forceUpdate=true`여도 Enka를 다시 호출하지 않습니다.
-4. 캐시가 없으면 JVM 전체 전역 rate limiter를 통과합니다.
-5. 대기 중인 요청과 실제 동시 HTTP 요청 수를 제한합니다.
-6. Enka가 HTTP 429를 반환하면 일정 시간 Enka 전체 호출을 중단하고 기존 provider fallback 로직이 MiHoMo를 시도합니다.
-7. Enka/MiHoMo 장애 또는 우리 서버의 전역 Enka 혼잡 제한 때문에 요청이 실패하면 사용자 개인의 3분 쿨다운 예약은 해제합니다.
+4. 같은 UID 조회가 동시에 들어오면 첫 요청만 외부 API를 호출하고 나머지는 같은 결과를 기다립니다.
+5. 캐시가 없으면 JVM 전체 전역 rate limiter를 통과합니다.
+6. Enka와 MiHoMo fallback을 합친 전체 조회의 대기 수와 동시 처리 수를 제한합니다.
+7. Enka가 HTTP 429를 반환하면 일정 시간 Enka 전체 호출을 중단하고 기존 provider fallback 로직이 MiHoMo를 시도합니다.
+8. Enka/MiHoMo 장애 또는 우리 서버의 전역 혼잡 제한 때문에 요청이 실패하면 사용자 개인의 3분 쿨다운 예약은 해제합니다.
 
 ## 기본값
 
@@ -19,10 +20,11 @@
 | `ENKA_CONNECT_TIMEOUT` | `3s` | Enka 서버에 TCP/HTTPS 연결을 맺을 최대 시간 |
 | `ENKA_READ_TIMEOUT` | `15s` | 연결 후 Enka 응답을 기다릴 최대 시간 |
 | `ENKA_CACHE_DEFAULT_TTL` | `60s` | Enka 응답에 `ttl`이 없을 때만 사용하는 TTL |
+| `ENKA_CACHE_MAXIMUM_TTL` | `24h` | 잘못된 과대 TTL을 잘라낼 최대 캐시 시간 |
 | `ENKA_CACHE_MAX_ENTRIES` | `5000` | JVM에 보관할 UID 캐시 최대 개수 |
 | `ENKA_MAX_REQUESTS_PER_SECOND` | `2` | Enka HTTP 요청 시작 속도 |
-| `ENKA_MAX_CONCURRENT_REQUESTS` | `8` | 실제로 동시에 진행할 Enka HTTP 요청 수 |
-| `ENKA_MAX_WAITING_REQUESTS` | `30` | 처리 슬롯 밖에서 대기 가능한 요청 수 |
+| `ENKA_MAX_CONCURRENT_REQUESTS` | `8` | Enka/MiHoMo를 포함해 동시에 진행할 프로필 조회 수(Enka 내부에도 같은 상한 적용) |
+| `ENKA_MAX_WAITING_REQUESTS` | `30` | 전체 프로필 조회 처리 슬롯 밖에서 대기 가능한 요청 수 |
 | `ENKA_REQUEST_WAIT_TIMEOUT` | `15s` | rate/concurrency 슬롯을 기다릴 최대 시간 |
 | `ENKA_BACKOFF_ON_429` | `30s` | HTTP 429 발생 후 Enka 전체 호출을 쉬는 최소 시간 |
 | `PROFILE_SYNC_COOLDOWN` | `3m` | 사용자 한 명의 UID 조회/갱신 간격 |

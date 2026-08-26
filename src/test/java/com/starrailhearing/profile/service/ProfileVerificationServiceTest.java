@@ -157,7 +157,20 @@ class ProfileVerificationServiceTest {
                         Duration.ofMinutes(10),
                         URI.create("https://resource.invalid")
                 ),
-                new AppProperties.Enka(URI.create("https://enka.invalid"), "test"),
+                new AppProperties.Enka(
+                        URI.create("https://enka.invalid"),
+                        "test",
+                        Duration.ofSeconds(3),
+                        Duration.ofSeconds(15),
+                        Duration.ofSeconds(60),
+                        Duration.ofHours(24),
+                        5000,
+                        2,
+                        8,
+                        30,
+                        Duration.ofSeconds(15),
+                        Duration.ofSeconds(30)
+                ),
                 new AppProperties.ProfileClient(Duration.ofSeconds(20), 3, Duration.ofSeconds(30))
         );
     }

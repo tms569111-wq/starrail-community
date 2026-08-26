@@ -85,6 +85,8 @@ app:
     read-timeout: ${ENKA_READ_TIMEOUT:15s}
     # Enka가 ttl을 누락했을 때만 쓰는 안전 기본값입니다. 실제 ttl이 있으면 그 값을 우선합니다.
     cache-default-ttl: ${ENKA_CACHE_DEFAULT_TTL:60s}
+    # 비정상적으로 큰 ttl 때문에 오래된 데이터가 계속 남거나 시간 계산이 넘치는 것을 막습니다.
+    cache-maximum-ttl: ${ENKA_CACHE_MAXIMUM_TTL:24h}
     cache-max-entries: ${ENKA_CACHE_MAX_ENTRIES:5000}
     # 단일 Spring 인스턴스 전체에서 Enka 요청 시작 속도를 제한합니다.
     max-requests-per-second: ${ENKA_MAX_REQUESTS_PER_SECOND:2}

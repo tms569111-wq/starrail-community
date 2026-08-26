@@ -52,6 +52,7 @@ public record AppProperties(
             Duration connectTimeout,
             Duration readTimeout,
             Duration cacheDefaultTtl,
+            Duration cacheMaximumTtl,
             int cacheMaxEntries,
             int maxRequestsPerSecond,
             int maxConcurrentRequests,
