@@ -15,8 +15,6 @@ import java.time.LocalDateTime;
 public class ProfileVerificationService {
 
     private static final String UID_PATTERN = "\\d{9}";
-    private static final String VERIFICATION_STATE_TOKEN = "PROFILE_VERIFICATION";
-
     private final ProfilePersistenceService persistenceService;
     private final MemberService memberService;
     private final GameProfileClient profileClient;
@@ -37,34 +35,22 @@ public class ProfileVerificationService {
         this.clock = clock;
     }
 
-    public ProfileChallengeView prepare(long memberId, String rawUid) {
+    public ProfileSyncResult connect(long memberId, String rawUid) {
         memberService.requireActiveForWrite(memberId);
         String uid = validateUid(rawUid);
-        PublicGameProfile publicProfile = profileClient.fetch(uid, false);
         LocalDateTime now = LocalDateTime.now(clock);
-        LocalDateTime expiresAt = now.plus(properties.mihomo().challengeTtl());
-
-        return persistenceService.prepare(
+        ProfileRefreshContext context = persistenceService.reserveLookup(
                 memberId,
                 uid,
-                publicProfile,
-                VERIFICATION_STATE_TOKEN,
-                expiresAt
-        );
-    }
-
-    public ProfileSyncResult verify(long memberId) {
-        memberService.requireActiveForWrite(memberId);
-        ProfileVerificationContext context = persistenceService.verificationContext(
-                memberId,
-                LocalDateTime.now(clock)
+                now,
+                properties.mihomo().syncCooldown()
         );
         PublicGameProfile publicProfile = profileClient.fetch(context.uid(), true);
         requireCharacters(publicProfile);
 
-        return persistenceService.completeVerification(
+        return persistenceService.completeLookup(
                 memberId,
-                context.challengeCode(),
+                context.uid(),
                 publicProfile,
                 LocalDateTime.now(clock)
         );
@@ -72,7 +58,7 @@ public class ProfileVerificationService {
 
     public ProfileSyncResult refresh(long memberId) {
         memberService.requireActiveForWrite(memberId);
-        ProfileRefreshContext context = persistenceService.refreshContext(
+        ProfileRefreshContext context = persistenceService.reserveRefresh(
                 memberId,
                 LocalDateTime.now(clock),
                 properties.mihomo().syncCooldown()
@@ -83,13 +69,12 @@ public class ProfileVerificationService {
         return persistenceService.completeRefresh(
                 memberId,
                 publicProfile,
-                LocalDateTime.now(clock),
-                properties.mihomo().syncCooldown()
+                LocalDateTime.now(clock)
         );
     }
 
     public ProfilePageView view(long memberId) {
-        return persistenceService.view(memberId);
+        return persistenceService.view(memberId, LocalDateTime.now(clock));
     }
 
     private void requireCharacters(PublicGameProfile publicProfile) {

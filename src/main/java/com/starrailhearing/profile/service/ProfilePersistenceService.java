@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.Objects;
 
 @Service
 @Transactional(readOnly = true)
@@ -46,12 +45,11 @@ public class ProfilePersistenceService {
     }
 
     @Transactional
-    public ProfileChallengeView prepare(
+    public ProfileRefreshContext reserveLookup(
             long memberId,
             String uid,
-            PublicGameProfile publicProfile,
-            String challengeCode,
-            LocalDateTime expiresAt
+            LocalDateTime now,
+            Duration cooldown
     ) {
         memberService.requireActiveForWrite(memberId);
         profileRepository.findByUid(uid)
@@ -61,9 +59,9 @@ public class ProfilePersistenceService {
                 });
 
         MemberAccount member = memberService.require(memberId);
-        GameProfile profile = profileRepository.findByMember_Id(memberId)
+        GameProfile profile = profileRepository.findForUpdateByMemberId(memberId)
                 .map(existing -> {
-                    if (!existing.getUid().equals(uid)) {
+                    if (existing.isVerified() && !existing.getUid().equals(uid)) {
                         throw new AppException(
                                 ErrorCode.INVALID_INPUT,
                                 "MVP에서는 한 계정에 하나의 UID만 연결할 수 있습니다."
@@ -73,39 +71,27 @@ public class ProfilePersistenceService {
                 })
                 .orElseGet(() -> new GameProfile(member, uid));
 
-        profile.startChallenge(
-                publicProfile.provider(),
-                publicProfile.nickname(),
-                publicProfile.signature(),
-                challengeCode,
-                expiresAt
-        );
+        requireLookupAvailable(profile, now);
+        profile.reserveLookup(uid, now.plus(cooldown));
         try {
             profileRepository.saveAndFlush(profile);
         } catch (DataIntegrityViolationException exception) {
             throw new AppException(ErrorCode.UID_ALREADY_BOUND, exception);
         }
-        return new ProfileChallengeView(uid, publicProfile.nickname(), challengeCode, expiresAt);
-    }
-
-    public ProfileVerificationContext verificationContext(long memberId, LocalDateTime now) {
-        GameProfile profile = requireProfile(memberId);
-        requireActiveChallenge(profile, now);
-        return new ProfileVerificationContext(profile.getUid(), profile.getChallengeCode());
+        return new ProfileRefreshContext(uid);
     }
 
     @Transactional
-    public ProfileSyncResult completeVerification(
+    public ProfileSyncResult completeLookup(
             long memberId,
-            String expectedChallengeCode,
+            String expectedUid,
             PublicGameProfile publicProfile,
             LocalDateTime now
     ) {
         memberService.requireActiveForWrite(memberId);
         GameProfile profile = requireProfileForUpdate(memberId);
-        requireActiveChallenge(profile, now);
-        if (!Objects.equals(profile.getChallengeCode(), expectedChallengeCode)) {
-            throw new AppException(ErrorCode.PROFILE_CHALLENGE_EXPIRED);
+        if (!profile.getUid().equals(expectedUid)) {
+            throw new AppException(ErrorCode.INVALID_INPUT, "조회 중 UID가 변경되었습니다. 다시 시도해 주세요.");
         }
 
         profile.completeVerification(
@@ -114,14 +100,17 @@ public class ProfilePersistenceService {
         return syncCharacters(profile, publicProfile, now);
     }
 
-    public ProfileRefreshContext refreshContext(
+    @Transactional
+    public ProfileRefreshContext reserveRefresh(
             long memberId,
             LocalDateTime now,
             Duration cooldown
     ) {
-        GameProfile profile = requireProfile(memberId);
+        memberService.requireActiveForWrite(memberId);
+        GameProfile profile = requireProfileForUpdate(memberId);
         requireVerified(profile);
-        requireCooldownElapsed(profile, now, cooldown);
+        requireLookupAvailable(profile, now);
+        profile.reserveRefresh(now.plus(cooldown));
         return new ProfileRefreshContext(profile.getUid());
     }
 
@@ -129,13 +118,11 @@ public class ProfilePersistenceService {
     public ProfileSyncResult completeRefresh(
             long memberId,
             PublicGameProfile publicProfile,
-            LocalDateTime now,
-            Duration cooldown
+            LocalDateTime now
     ) {
         memberService.requireActiveForWrite(memberId);
         GameProfile profile = requireProfileForUpdate(memberId);
         requireVerified(profile);
-        requireCooldownElapsed(profile, now, cooldown);
 
         ProfileSyncResult result = syncCharacters(profile, publicProfile, now);
         profile.recordSync(
@@ -144,7 +131,7 @@ public class ProfilePersistenceService {
         return result;
     }
 
-    public ProfilePageView view(long memberId) {
+    public ProfilePageView view(long memberId, LocalDateTime now) {
         return profileRepository.findByMember_Id(memberId)
                 .map(profile -> new ProfilePageView(
                         true,
@@ -155,6 +142,7 @@ public class ProfilePersistenceService {
                         profile.getChallengeExpiresAt(),
                         profile.getVerifiedAt(),
                         profile.getLastSyncedAt(),
+                        retryAfterSeconds(profile, now),
                         verifiedCharacterRepository
                                 .findAllByProfile_IdOrderByCharacter_DisplayOrderAsc(profile.getId())
                                 .stream()
@@ -242,33 +230,30 @@ public class ProfilePersistenceService {
                 .orElseThrow(() -> new AppException(ErrorCode.PROFILE_NOT_FOUND));
     }
 
-    private void requireActiveChallenge(GameProfile profile, LocalDateTime now) {
-        if (profile.getChallengeCode() == null
-                || profile.getChallengeExpiresAt() == null
-                || now.isAfter(profile.getChallengeExpiresAt())) {
-            throw new AppException(ErrorCode.PROFILE_CHALLENGE_EXPIRED);
-        }
-    }
-
     private void requireVerified(GameProfile profile) {
         if (!profile.isVerified()) {
             throw new AppException(ErrorCode.PROFILE_VERIFICATION_REQUIRED);
         }
     }
 
-    private void requireCooldownElapsed(
-            GameProfile profile,
-            LocalDateTime now,
-            Duration cooldown
-    ) {
-        if (profile.getLastSyncedAt() != null
-                && now.isBefore(profile.getLastSyncedAt().plus(cooldown))) {
-            throw new AppException(ErrorCode.PROFILE_SYNC_COOLDOWN);
+    private void requireLookupAvailable(GameProfile profile, LocalDateTime now) {
+        long seconds = retryAfterSeconds(profile, now);
+        if (seconds > 0) {
+            throw new AppException(
+                    ErrorCode.PROFILE_SYNC_COOLDOWN,
+                    "너무 시도가 잦습니다. %d분 %02d초 뒤 다시 시도해 주세요."
+                            .formatted(seconds / 60, seconds % 60)
+            );
         }
     }
-}
 
-record ProfileVerificationContext(String uid, String challengeCode) {
+    private long retryAfterSeconds(GameProfile profile, LocalDateTime now) {
+        if (profile.getNextLookupAt() == null || !now.isBefore(profile.getNextLookupAt())) {
+            return 0;
+        }
+        long millis = Duration.between(now, profile.getNextLookupAt()).toMillis();
+        return Math.max(1, (millis + 999) / 1000);
+    }
 }
 
 record ProfileRefreshContext(String uid) {

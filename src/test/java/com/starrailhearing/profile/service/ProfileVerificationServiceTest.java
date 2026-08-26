@@ -27,74 +27,47 @@ class ProfileVerificationServiceTest {
 
     private static final long MEMBER_ID = 1L;
     private static final String UID = "826149992";
-    private static final String VERIFICATION_STATE_TOKEN = "PROFILE_VERIFICATION";
-    private static final Duration SYNC_COOLDOWN = Duration.ofMinutes(1);
+    private static final Duration SYNC_COOLDOWN = Duration.ofMinutes(3);
     private static final Clock CLOCK = Clock.fixed(
             Instant.parse("2026-08-23T00:00:00Z"),
             ZoneOffset.UTC
     );
 
     @Test
-    void UID_최초_등록은_소개문과_무관하게_통과한다() {
+    void UID_입력_한_번으로_캐릭터까지_등록한다() {
         Fixture fixture = new Fixture();
         PublicGameProfile profile = profile("평범한 소개문");
-        ProfileChallengeView expected = new ProfileChallengeView(
-                UID,
-                profile.nickname(),
-                VERIFICATION_STATE_TOKEN,
-                LocalDateTime.now(CLOCK).plusMinutes(10)
-        );
-        when(fixture.profileClient.fetch(UID, false)).thenReturn(profile);
-        when(fixture.persistenceService.prepare(
+        ProfileSyncResult expected = new ProfileSyncResult(1, 1, 0, 0);
+        when(fixture.persistenceService.reserveLookup(
                 eq(MEMBER_ID),
                 eq(UID),
-                eq(profile),
-                eq(VERIFICATION_STATE_TOKEN),
-                any(LocalDateTime.class)
+                any(LocalDateTime.class),
+                eq(SYNC_COOLDOWN)
+        )).thenReturn(new ProfileRefreshContext(UID));
+        when(fixture.profileClient.fetch(UID, true)).thenReturn(profile);
+        when(fixture.persistenceService.completeLookup(
+                eq(MEMBER_ID), eq(UID), eq(profile), any(LocalDateTime.class)
         )).thenReturn(expected);
 
-        ProfileChallengeView actual = fixture.service.prepare(MEMBER_ID, UID);
+        ProfileSyncResult actual = fixture.service.connect(MEMBER_ID, UID);
 
         assertThat(actual).isSameAs(expected);
     }
 
     @Test
-    void UID_최초_등록은_빈_소개문도_통과한다() {
+    void UID_등록은_빈_소개문도_통과한다() {
         Fixture fixture = new Fixture();
         PublicGameProfile profile = profile("");
-        when(fixture.profileClient.fetch(UID, false)).thenReturn(profile);
-
-        fixture.service.prepare(MEMBER_ID, UID);
-
-        verify(fixture.persistenceService).prepare(
-                eq(MEMBER_ID),
-                eq(UID),
-                eq(profile),
-                eq(VERIFICATION_STATE_TOKEN),
-                any(LocalDateTime.class)
-        );
-    }
-
-    @Test
-    void 최종_인증도_소개문과_무관하게_통과한다() {
-        Fixture fixture = new Fixture();
-        PublicGameProfile profile = profile("원래 사용하던 소개문");
-        ProfileSyncResult expected = new ProfileSyncResult(1, 1, 0, 0);
-        when(fixture.persistenceService.verificationContext(
-                eq(MEMBER_ID),
-                any(LocalDateTime.class)
-        )).thenReturn(new ProfileVerificationContext(UID, VERIFICATION_STATE_TOKEN));
+        when(fixture.persistenceService.reserveLookup(
+                eq(MEMBER_ID), eq(UID), any(LocalDateTime.class), eq(SYNC_COOLDOWN)
+        )).thenReturn(new ProfileRefreshContext(UID));
         when(fixture.profileClient.fetch(UID, true)).thenReturn(profile);
-        when(fixture.persistenceService.completeVerification(
-                eq(MEMBER_ID),
-                eq(VERIFICATION_STATE_TOKEN),
-                eq(profile),
-                any(LocalDateTime.class)
-        )).thenReturn(expected);
 
-        ProfileSyncResult actual = fixture.service.verify(MEMBER_ID);
+        fixture.service.connect(MEMBER_ID, UID);
 
-        assertThat(actual).isSameAs(expected);
+        verify(fixture.persistenceService).completeLookup(
+                eq(MEMBER_ID), eq(UID), eq(profile), any(LocalDateTime.class)
+        );
     }
 
     @Test
@@ -102,7 +75,7 @@ class ProfileVerificationServiceTest {
         Fixture fixture = new Fixture();
         PublicGameProfile changedProfile = profile("이제는 다른 소개문입니다.");
         ProfileSyncResult expected = new ProfileSyncResult(1, 1, 0, 0);
-        when(fixture.persistenceService.refreshContext(
+        when(fixture.persistenceService.reserveRefresh(
                 eq(MEMBER_ID),
                 any(LocalDateTime.class),
                 eq(SYNC_COOLDOWN)
@@ -111,8 +84,7 @@ class ProfileVerificationServiceTest {
         when(fixture.persistenceService.completeRefresh(
                 eq(MEMBER_ID),
                 eq(changedProfile),
-                any(LocalDateTime.class),
-                eq(SYNC_COOLDOWN)
+                any(LocalDateTime.class)
         )).thenReturn(expected);
 
         ProfileSyncResult actual = fixture.service.refresh(MEMBER_ID);

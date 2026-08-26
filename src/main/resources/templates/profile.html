@@ -10,47 +10,30 @@
     <div class="page-title">
         <span class="eyebrow">MY STAR RAIL PROFILE</span>
         <h1>내 캐릭터 인증</h1>
-        <p>UID로 공개 프로필을 확인하고, 전시 캐릭터를 누적합니다.</p>
+        <p>닉네임 설정을 기다릴 필요 없이 UID로 전시 캐릭터를 바로 불러올 수 있습니다.</p>
     </div>
 
     <div class="flash flash--success" th:if="${successMessage}" th:text="${successMessage}"></div>
     <div class="flash flash--error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
-    <section class="profile-panel" th:if="${!profile.exists}">
+    <section class="profile-panel"
+             th:if="${!profile.exists or profile.status.name() == 'PENDING'}">
         <div class="step-number">01</div>
         <div>
-            <h2>게임 UID 입력</h2>
-            <p>공개 프로필의 닉네임과 UID를 확인합니다. UID는 숫자 9자리입니다.</p>
-            <form class="uid-form" th:if="${currentUser.canWrite}" method="post" th:action="@{/me/profile/challenge}">
+            <h2>UID로 내 캐릭터 바로 불러오기</h2>
+            <p>UID는 숫자 9자리입니다. 게임에서 전시 캐릭터와 캐릭터 상세 정보 표시를 먼저 켜 주세요.</p>
+            <form class="uid-form" th:if="${currentUser.canWrite}" method="post"
+                  th:action="@{/me/profile/challenge}" data-profile-fetch-form>
                 <input type="text" name="uid" inputmode="numeric" pattern="[0-9]{9}" maxlength="9"
-                       placeholder="예: 800000000" required>
-                <button class="button button--primary" type="submit">프로필 찾기</button>
-            </form>
-        </div>
-    </section>
-
-    <section class="profile-panel profile-panel--pending"
-             th:if="${profile.exists and profile.status.name() == 'PENDING'}">
-        <div class="step-number">02</div>
-        <div class="profile-panel__content">
-            <div class="profile-summary">
-                <div>
-                    <span>확인된 프로필</span>
-                    <strong th:text="${profile.nickname}">닉네임</strong>
-                </div>
-                <div>
-                    <span>UID</span>
-                    <strong th:text="${profile.uid}">000000000</strong>
-                </div>
-            </div>
-            <h2>전시 캐릭터를 확인해 주세요</h2>
-            <ol class="instruction-list">
-                <li>UID와 닉네임이 본인 계정과 일치하는지 확인</li>
-                <li>전시 캐릭터와 지원 캐릭터를 공개 상태로 설정</li>
-                <li>아래 버튼을 눌러 인증과 캐릭터 등록 완료</li>
-            </ol>
-            <form method="post" th:if="${currentUser.canWrite}" th:action="@{/me/profile/verify}">
-                <button class="button button--primary" type="submit">캐릭터 인증 완료</button>
+                       th:value="${profile.uid}" placeholder="예: 800000000" required>
+                <button class="button button--primary" type="submit"
+                        th:disabled="${profile.retryAfterSeconds > 0}"
+                        data-loading-text="캐릭터 정보를 가져오는 중입니다…">UID 검색</button>
+                <span class="form-hint" role="status" aria-live="polite" data-profile-fetch-status></span>
+                <span class="form-hint" th:if="${profile.retryAfterSeconds > 0}"
+                      th:attr="data-profile-cooldown=${profile.retryAfterSeconds}" aria-live="polite">
+                    너무 시도가 잦습니다. 잠시 후 다시 시도해 주세요.
+                </span>
             </form>
         </div>
     </section>
@@ -67,8 +50,16 @@
                 <strong th:text="${profile.characters.size()}">0</strong>
                 <span>누적 인증 캐릭터</span>
             </div>
-            <form method="post" th:if="${currentUser.canWrite}" th:action="@{/me/profile/refresh}">
-                <button class="button button--secondary" type="submit">현재 8명 다시 불러오기</button>
+            <form method="post" th:if="${currentUser.canWrite}" th:action="@{/me/profile/refresh}"
+                  data-profile-fetch-form>
+                <button class="button button--secondary" type="submit"
+                        th:disabled="${profile.retryAfterSeconds > 0}"
+                        data-loading-text="캐릭터 정보를 가져오는 중입니다…">현재 8명 다시 불러오기</button>
+                <span class="form-hint" role="status" aria-live="polite" data-profile-fetch-status></span>
+                <span class="form-hint" th:if="${profile.retryAfterSeconds > 0}"
+                      th:attr="data-profile-cooldown=${profile.retryAfterSeconds}" aria-live="polite">
+                    너무 시도가 잦습니다. 잠시 후 다시 시도해 주세요.
+                </span>
             </form>
         </div>
 
@@ -95,7 +86,7 @@
         </div>
     </section>
     <div class="locked-comment" th:if="${!currentUser.canWrite}">
-        UID 인증·갱신 전에 <a th:href="@{/me/account}">닉네임 설정 또는 작성 제한 상태</a>를 확인해 주세요.
+        UID 인증·갱신을 사용할 수 없는 계정입니다. <a th:href="@{/me/account}">계정 상태</a>를 확인해 주세요.
     </div>
 </main>
 

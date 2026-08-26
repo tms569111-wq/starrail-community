@@ -47,4 +47,42 @@
             }
         });
     });
+
+    document.querySelectorAll('[data-profile-fetch-form]').forEach(form => {
+        form.addEventListener('submit', event => {
+            const button = form.querySelector('button[type="submit"]');
+            if (!button || button.disabled) {
+                event.preventDefault();
+                return;
+            }
+            button.disabled = true;
+            button.textContent = button.dataset.loadingText || '불러오는 중…';
+            const status = form.querySelector('[data-profile-fetch-status]');
+            if (status) status.textContent = '캐릭터 정보를 가져오는 중입니다. 잠시만 기다려 주세요.';
+        });
+    });
+
+    document.querySelectorAll('[data-profile-cooldown]').forEach(timer => {
+        const form = timer.closest('form');
+        const button = form?.querySelector('button[type="submit"]');
+        const originalLabel = button?.textContent;
+        let remaining = Number(timer.dataset.profileCooldown);
+
+        const update = () => {
+            if (!Number.isFinite(remaining) || remaining <= 0) {
+                timer.textContent = '이제 다시 불러올 수 있습니다.';
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = originalLabel;
+                }
+                return;
+            }
+            const minutes = Math.floor(remaining / 60);
+            const seconds = String(remaining % 60).padStart(2, '0');
+            timer.textContent = `너무 시도가 잦습니다. ${minutes}분 ${seconds}초 뒤 다시 시도해 주세요.`;
+            remaining -= 1;
+            window.setTimeout(update, 1000);
+        };
+        update();
+    });
 })();

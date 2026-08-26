@@ -1283,8 +1283,25 @@ img {
 .uid-form {
     display: flex;
     max-width: 550px;
+    flex-wrap: wrap;
     gap: 10px;
     margin-top: 24px;
+}
+
+.uid-form input {
+    flex: 1 1 320px;
+}
+
+[data-profile-fetch-form] .form-hint {
+    flex-basis: 100%;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.button:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
 }
 
 .profile-panel__content {
