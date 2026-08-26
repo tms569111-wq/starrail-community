@@ -5,11 +5,6 @@ spring:
     url: ${DB_URL:jdbc:mysql://localhost:3306/starrail_hearing?serverTimezone=UTC&characterEncoding=UTF-8}
     username: ${DB_USERNAME:oracle_app}
     password: ${DB_PASSWORD:}
-  data:
-    redis:
-      url: ${REDIS_URL:redis://localhost:6379}
-      timeout: 2s
-      connect-timeout: 2s
   security:
     oauth2:
       client:
@@ -85,7 +80,6 @@ app:
   enka:
     base-url: ${ENKA_BASE_URL:https://enka.network}
     user-agent: ${ENKA_USER_AGENT:StarrailHearing/0.1 contact=local-development}
-    max-requests-per-second: ${ENKA_MAX_REQUESTS_PER_SECOND:3}
   profile-client:
     cache-ttl: ${PROFILE_CACHE_TTL:20s}
     circuit-failure-threshold: ${PROFILE_CIRCUIT_FAILURE_THRESHOLD:3}
