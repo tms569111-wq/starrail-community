@@ -12,17 +12,17 @@ import com.starrailhearing.profile.domain.GameProfile;
 import com.starrailhearing.profile.domain.VerifiedCharacter;
 import com.starrailhearing.profile.repository.GameProfileRepository;
 import com.starrailhearing.profile.repository.VerifiedCharacterRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.Objects;
 
 @Service
 @Transactional(readOnly = true)
@@ -43,6 +43,23 @@ public class ProfilePersistenceService {
         this.profileRepository = profileRepository;
         this.verifiedCharacterRepository = verifiedCharacterRepository;
         this.aliasRepository = aliasRepository;
+    }
+
+    public void requireUidAvailableForMember(long memberId, String uid) {
+        memberService.requireActive(memberId);
+        profileRepository.findByUid(uid)
+                .filter(profile -> !profile.getMember().getId().equals(memberId))
+                .ifPresent(profile -> {
+                    throw new AppException(ErrorCode.UID_ALREADY_BOUND);
+                });
+        profileRepository.findByMember_Id(memberId)
+                .filter(existing -> !existing.getUid().equals(uid))
+                .ifPresent(existing -> {
+                    throw new AppException(
+                            ErrorCode.INVALID_INPUT,
+                            "MVP에서는 한 계정에 하나의 UID만 연결할 수 있습니다."
+                    );
+                });
     }
 
     @Transactional
