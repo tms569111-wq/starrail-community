@@ -31,7 +31,7 @@
                     <input type="hidden" name="version" th:value="${selectedVersionCode}">
                     <input type="hidden" name="filter" th:value="${filter.name()}">
                     <input type="hidden" name="sort" th:value="${sort.name()}">
-                    <textarea name="content" maxlength="1000" rows="3" th:text="${reply.content}" required></textarea>
+                    <textarea name="content" maxlength="3000" rows="4" th:text="${reply.content}" required></textarea>
                     <button class="button button--secondary button--small" type="submit">수정 저장</button>
                 </form>
             </details>
