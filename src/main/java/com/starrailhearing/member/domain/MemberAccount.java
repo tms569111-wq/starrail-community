@@ -184,6 +184,16 @@ public class MemberAccount extends BaseTimeEntity {
         profileFetchAvailableAt = now.plus(cooldown);
     }
 
+    public void extendProfileFetch(LocalDateTime now, Duration cooldown) {
+        if (now == null || cooldown == null || cooldown.isNegative() || cooldown.isZero()) {
+            throw new IllegalArgumentException("프로필 조회 제한 시간을 확인해 주세요.");
+        }
+        LocalDateTime candidate = now.plus(cooldown);
+        if (profileFetchAvailableAt == null || profileFetchAvailableAt.isBefore(candidate)) {
+            profileFetchAvailableAt = candidate;
+        }
+    }
+
     public boolean isAdmin() {
         return role == MemberRole.ADMIN;
     }

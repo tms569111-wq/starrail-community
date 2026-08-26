@@ -46,5 +46,12 @@ app:
     user-agent: StarrailHearing-Test/0.1
   profile-client:
     cache-ttl: 20s
+    maximum-cache-ttl: 24h
+    maximum-cache-entries: 1000
+    redis-cache-enabled: false
+    maximum-concurrent-requests: 4
+    bulkhead-wait: 250ms
+    provider-minimum-interval: 0ms
+    provider-rate-wait: 0ms
     circuit-failure-threshold: 3
     circuit-open-duration: 30s

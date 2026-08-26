@@ -51,6 +51,13 @@ public record AppProperties(
 
     public record ProfileClient(
             Duration cacheTtl,
+            Duration maximumCacheTtl,
+            int maximumCacheEntries,
+            boolean redisCacheEnabled,
+            int maximumConcurrentRequests,
+            Duration bulkheadWait,
+            Duration providerMinimumInterval,
+            Duration providerRateWait,
             int circuitFailureThreshold,
             Duration circuitOpenDuration
     ) {

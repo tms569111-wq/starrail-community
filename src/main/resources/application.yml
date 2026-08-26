@@ -5,6 +5,11 @@ spring:
     url: ${DB_URL:jdbc:mysql://localhost:3306/starrail_hearing?serverTimezone=UTC&characterEncoding=UTF-8}
     username: ${DB_USERNAME:oracle_app}
     password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:3000}
+      validation-timeout: ${DB_VALIDATION_TIMEOUT:1000}
   security:
     oauth2:
       client:
@@ -27,6 +32,10 @@ spring:
     multipart:
       max-file-size: 700KB
       max-request-size: 1MB
+  data:
+    redis:
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:1s}
+      timeout: ${REDIS_READ_TIMEOUT:1s}
   http:
     clients:
       connect-timeout: 3s
@@ -48,6 +57,9 @@ server:
       enabled: false
 
 management:
+  health:
+    redis:
+      enabled: false
   endpoints:
     web:
       exposure:
@@ -82,5 +94,12 @@ app:
     user-agent: ${ENKA_USER_AGENT:StarrailHearing/0.1 contact=local-development}
   profile-client:
     cache-ttl: ${PROFILE_CACHE_TTL:20s}
+    maximum-cache-ttl: ${PROFILE_CACHE_MAX_TTL:24h}
+    maximum-cache-entries: ${PROFILE_CACHE_MAX_ENTRIES:1000}
+    redis-cache-enabled: ${PROFILE_REDIS_CACHE_ENABLED:false}
+    maximum-concurrent-requests: ${PROFILE_MAX_CONCURRENT_REQUESTS:4}
+    bulkhead-wait: ${PROFILE_BULKHEAD_WAIT:250ms}
+    provider-minimum-interval: ${PROFILE_PROVIDER_MIN_INTERVAL:1s}
+    provider-rate-wait: ${PROFILE_PROVIDER_RATE_WAIT:4s}
     circuit-failure-threshold: ${PROFILE_CIRCUIT_FAILURE_THRESHOLD:3}
     circuit-open-duration: ${PROFILE_CIRCUIT_OPEN_DURATION:30s}

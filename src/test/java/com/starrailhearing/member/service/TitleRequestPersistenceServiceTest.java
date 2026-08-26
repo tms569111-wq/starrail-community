@@ -30,12 +30,17 @@ class TitleRequestPersistenceServiceTest {
         MemberService memberService = mock(MemberService.class);
         BadgeService badgeService = mock(BadgeService.class);
         AdminAuditService auditService = mock(AdminAuditService.class);
-        AppProperties properties = mock(AppProperties.class);
-        AppProperties.Operator operatorProperties = mock(AppProperties.Operator.class);
+        AppProperties properties = new AppProperties(
+                new AppProperties.Operator("", "4.5", "PLATINUM", "#8DE9FF"),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
         GameVersionRepository versionRepository = mock(GameVersionRepository.class);
 
-        when(properties.operator()).thenReturn(operatorProperties);
-        when(operatorProperties.platinumVersion()).thenReturn("4.5");
         when(memberService.requireActiveForWrite(7L)).thenReturn(mock(MemberAccount.class));
         when(profileRepository.existsByMember_IdAndVerificationStatus(
                 7L, ProfileVerificationStatus.VERIFIED

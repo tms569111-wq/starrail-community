@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class CommentService {
+    private static final int MAX_PAGE_NUMBER = 100;
 
     private static final int PAGE_SIZE = 20;
 
@@ -162,6 +163,12 @@ public class CommentService {
         CharacterEvaluation evaluation = evaluationReader.requireEvaluation(
                 character.getId(), version.getId()
         );
+        if (requestedPage > MAX_PAGE_NUMBER) {
+            throw new AppException(
+                    ErrorCode.INVALID_INPUT,
+                    "댓글 페이지는 " + MAX_PAGE_NUMBER + "쪽까지만 조회할 수 있습니다."
+            );
+        }
         int pageNumber = Math.max(0, requestedPage);
         Page<CharacterComment> page = commentRepository.findVisibleRoots(
                 evaluation.getId(), filter.getMinimum(), filter.getMaximum(),

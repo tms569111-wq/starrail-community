@@ -12,7 +12,11 @@ services:
       APP_PLATINUM_VERSION: "${APP_PLATINUM_VERSION:-4.4}"
       APP_PLATINUM_LABEL: "${APP_PLATINUM_LABEL:-이상중재 PLATINUM}"
       APP_PLATINUM_COLOR: "${APP_PLATINUM_COLOR:-#8DE9FF}"
-      MIHOMO_USER_AGENT: "${MIHOMO_USER_AGENT:-StarrailHearing/0.1}"
+      MIHOMO_USER_AGENT: "${MIHOMO_USER_AGENT:-StarrailHearing/0.1 contact=local-development}"
+      ENKA_USER_AGENT: "${ENKA_USER_AGENT:-StarrailHearing/0.1 contact=local-development}"
+      PROFILE_REDIS_CACHE_ENABLED: "true"
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
       TITLE_PRIVATE_UPLOAD_DIR: /app/private-uploads/title-verification
       SPRING_THYMELEAF_CACHE: "${SPRING_THYMELEAF_CACHE:-true}"
       SERVER_FORWARD_HEADERS_STRATEGY: "${SERVER_FORWARD_HEADERS_STRATEGY:-none}"
@@ -23,6 +27,8 @@ services:
       - title-uploads:/app/private-uploads/title-verification
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   db:
@@ -39,6 +45,25 @@ services:
       - mysql-data:/var/lib/mysql
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u$${MYSQL_USER} -p$${MYSQL_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 128mb
+      - --maxmemory-policy
+      - allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 20

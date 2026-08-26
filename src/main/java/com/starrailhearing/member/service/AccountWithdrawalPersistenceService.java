@@ -57,7 +57,8 @@ public class AccountWithdrawalPersistenceService {
     public void withdrawData(long memberId) {
         MemberAccount member = memberService.requireReadableForUpdate(memberId);
         boolean evidenceDeleted = true;
-        for (var request : titleRequestRepository.findAllByMember_IdOrderByCreatedAtDesc(memberId)) {
+        for (var request : titleRequestRepository
+                .findByMember_IdAndPrivateImagePathIsNotNull(memberId)) {
             String path = request.getPrivateImagePath();
             if (path != null && !path.isBlank()) {
                 evidenceDeleted = imageStorage.delete(path) && evidenceDeleted;

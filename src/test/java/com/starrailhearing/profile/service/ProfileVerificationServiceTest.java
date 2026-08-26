@@ -75,6 +75,20 @@ class ProfileVerificationServiceTest {
     }
 
     @Test
+    void 공급자_TTL이_3분보다_길면_회원_조회_제한도_늘린다() {
+        Fixture fixture = new Fixture();
+        PublicGameProfile profile = profile("").withCacheTtlSeconds(720);
+        when(fixture.profileClient.fetch(UID, false)).thenReturn(profile);
+
+        fixture.service.verifyUid(MEMBER_ID, UID);
+
+        verify(fixture.memberService).extendProfileFetchCooldown(
+                MEMBER_ID,
+                Duration.ofMinutes(12)
+        );
+    }
+
+    @Test
     void 잘못된_UID는_외부_조회_제한을_소비하지_않는다() {
         Fixture fixture = new Fixture();
 
@@ -158,7 +172,18 @@ class ProfileVerificationServiceTest {
                         URI.create("https://resource.invalid")
                 ),
                 new AppProperties.Enka(URI.create("https://enka.invalid"), "test"),
-                new AppProperties.ProfileClient(Duration.ofSeconds(20), 3, Duration.ofSeconds(30))
+                new AppProperties.ProfileClient(
+                        Duration.ofSeconds(20),
+                        Duration.ofHours(24),
+                        1000,
+                        false,
+                        4,
+                        Duration.ofMillis(250),
+                        Duration.ZERO,
+                        Duration.ZERO,
+                        3,
+                        Duration.ofSeconds(30)
+                )
         );
     }
 
@@ -171,7 +196,8 @@ class ProfileVerificationServiceTest {
                 memberService,
                 profileClient,
                 properties(),
-                CLOCK
+                CLOCK,
+                new ProfileFetchBulkhead(properties())
         );
     }
 }

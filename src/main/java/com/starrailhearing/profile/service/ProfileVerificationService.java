@@ -21,65 +21,77 @@ public class ProfileVerificationService {
     private final GameProfileClient profileClient;
     private final AppProperties properties;
     private final Clock clock;
+    private final ProfileFetchBulkhead bulkhead;
 
     public ProfileVerificationService(
             ProfilePersistenceService persistenceService,
             MemberService memberService,
             GameProfileClient profileClient,
             AppProperties properties,
-            Clock clock
+            Clock clock,
+            ProfileFetchBulkhead bulkhead
     ) {
         this.persistenceService = persistenceService;
         this.memberService = memberService;
         this.profileClient = profileClient;
         this.properties = properties;
         this.clock = clock;
+        this.bulkhead = bulkhead;
     }
 
     public ProfileSyncResult verifyUid(long memberId, String rawUid) {
         String uid = validateUid(rawUid);
-        memberService.reserveProfileFetch(memberId, properties.mihomo().syncCooldown());
-        PublicGameProfile publicProfile = profileClient.fetch(uid, false);
-        requireCharacters(publicProfile);
-        LocalDateTime now = LocalDateTime.now(clock);
-        return persistenceService.bindAndVerify(memberId, uid, publicProfile, now);
+        return bulkhead.execute(() -> {
+            memberService.reserveProfileFetch(memberId, properties.mihomo().syncCooldown());
+            PublicGameProfile publicProfile = profileClient.fetch(uid, false);
+            extendCooldownToProviderTtl(memberId, publicProfile);
+            requireCharacters(publicProfile);
+            LocalDateTime now = LocalDateTime.now(clock);
+            return persistenceService.bindAndVerify(memberId, uid, publicProfile, now);
+        });
     }
 
     public ProfileSyncResult verify(long memberId) {
-        memberService.requireActive(memberId);
-        ProfileVerificationContext context = persistenceService.verificationContext(
-                memberId,
-                LocalDateTime.now(clock)
-        );
-        memberService.reserveProfileFetch(memberId, properties.mihomo().syncCooldown());
-        PublicGameProfile publicProfile = profileClient.fetch(context.uid(), true);
-        requireCharacters(publicProfile);
+        return bulkhead.execute(() -> {
+            memberService.requireActive(memberId);
+            ProfileVerificationContext context = persistenceService.verificationContext(
+                    memberId,
+                    LocalDateTime.now(clock)
+            );
+            memberService.reserveProfileFetch(memberId, properties.mihomo().syncCooldown());
+            PublicGameProfile publicProfile = profileClient.fetch(context.uid(), true);
+            extendCooldownToProviderTtl(memberId, publicProfile);
+            requireCharacters(publicProfile);
 
-        return persistenceService.completeVerification(
-                memberId,
-                context.challengeCode(),
-                publicProfile,
-                LocalDateTime.now(clock)
-        );
+            return persistenceService.completeVerification(
+                    memberId,
+                    context.challengeCode(),
+                    publicProfile,
+                    LocalDateTime.now(clock)
+            );
+        });
     }
 
     public ProfileSyncResult refresh(long memberId) {
-        memberService.requireActive(memberId);
-        ProfileRefreshContext context = persistenceService.refreshContext(
-                memberId,
-                LocalDateTime.now(clock),
-                properties.mihomo().syncCooldown()
-        );
-        memberService.reserveProfileFetch(memberId, properties.mihomo().syncCooldown());
-        PublicGameProfile publicProfile = profileClient.fetch(context.uid(), true);
-        requireCharacters(publicProfile);
+        return bulkhead.execute(() -> {
+            memberService.requireActive(memberId);
+            ProfileRefreshContext context = persistenceService.refreshContext(
+                    memberId,
+                    LocalDateTime.now(clock),
+                    properties.mihomo().syncCooldown()
+            );
+            memberService.reserveProfileFetch(memberId, properties.mihomo().syncCooldown());
+            PublicGameProfile publicProfile = profileClient.fetch(context.uid(), true);
+            extendCooldownToProviderTtl(memberId, publicProfile);
+            requireCharacters(publicProfile);
 
-        return persistenceService.completeRefresh(
-                memberId,
-                publicProfile,
-                LocalDateTime.now(clock),
-                properties.mihomo().syncCooldown()
-        );
+            return persistenceService.completeRefresh(
+                    memberId,
+                    publicProfile,
+                    LocalDateTime.now(clock),
+                    properties.mihomo().syncCooldown()
+            );
+        });
     }
 
     public ProfilePageView view(long memberId) {
@@ -89,6 +101,22 @@ public class ProfileVerificationService {
     private void requireCharacters(PublicGameProfile publicProfile) {
         if (!publicProfile.displayEnabled() || publicProfile.characters().isEmpty()) {
             throw new AppException(ErrorCode.PROFILE_NOT_PUBLIC);
+        }
+    }
+
+    private void extendCooldownToProviderTtl(long memberId, PublicGameProfile publicProfile) {
+        if (publicProfile.cacheTtlSeconds() <= 0) return;
+        java.time.Duration providerTtl = java.time.Duration.ofSeconds(
+                publicProfile.cacheTtlSeconds()
+        );
+        java.time.Duration configuredMaximum = properties.profileClient().maximumCacheTtl();
+        if (configuredMaximum != null
+                && configuredMaximum.isPositive()
+                && providerTtl.compareTo(configuredMaximum) > 0) {
+            providerTtl = configuredMaximum;
+        }
+        if (providerTtl.compareTo(properties.mihomo().syncCooldown()) > 0) {
+            memberService.extendProfileFetchCooldown(memberId, providerTtl);
         }
     }
 

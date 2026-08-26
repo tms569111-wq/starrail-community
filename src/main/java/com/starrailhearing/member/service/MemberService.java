@@ -85,6 +85,17 @@ public class MemberService {
     }
 
     @Transactional
+    public LocalDateTime extendProfileFetchCooldown(long memberId, Duration cooldown) {
+        MemberAccount member = requireActiveLocked(memberId);
+        LocalDateTime now = LocalDateTime.now(clock);
+        if (!member.isActive()) {
+            throw new AppException(ErrorCode.ACCOUNT_NOT_ACTIVE);
+        }
+        member.extendProfileFetch(now, cooldown);
+        return member.getProfileFetchAvailableAt();
+    }
+
+    @Transactional
     public MemberAccount requireReadable(long memberId) {
         MemberAccount member = require(memberId);
         member.restoreIfExpired(LocalDateTime.now(clock));
