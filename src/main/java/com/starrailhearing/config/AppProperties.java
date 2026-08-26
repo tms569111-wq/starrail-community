@@ -46,7 +46,17 @@ public record AppProperties(
     ) {
     }
 
-    public record Enka(URI baseUrl, String userAgent) {
+    public record Enka(
+            URI baseUrl,
+            String userAgent,
+            Duration cacheDefaultTtl,
+            int cacheMaxEntries,
+            int maxRequestsPerSecond,
+            int maxConcurrentRequests,
+            int maxWaitingRequests,
+            Duration requestWaitTimeout,
+            Duration backoffOn429
+    ) {
     }
 
     public record ProfileClient(

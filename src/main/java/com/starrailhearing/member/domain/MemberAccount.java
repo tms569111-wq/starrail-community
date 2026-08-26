@@ -184,6 +184,12 @@ public class MemberAccount extends BaseTimeEntity {
         profileFetchAvailableAt = now.plus(cooldown);
     }
 
+    public void releaseProfileFetchReservation(LocalDateTime reservedUntil) {
+        if (reservedUntil != null && reservedUntil.equals(profileFetchAvailableAt)) {
+            profileFetchAvailableAt = null;
+        }
+    }
+
     public boolean isAdmin() {
         return role == MemberRole.ADMIN;
     }

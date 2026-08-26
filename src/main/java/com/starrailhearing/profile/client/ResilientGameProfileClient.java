@@ -4,6 +4,8 @@ import com.starrailhearing.character.domain.ProfileProvider;
 import com.starrailhearing.common.exception.AppException;
 import com.starrailhearing.common.exception.ErrorCode;
 import com.starrailhearing.config.AppProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -18,6 +20,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class ResilientGameProfileClient implements GameProfileClient {
+
+    private static final Logger log = LoggerFactory.getLogger(ResilientGameProfileClient.class);
 
     private final List<ProfileProviderClient> providers;
     private final AppProperties.ProfileClient properties;
@@ -38,13 +42,16 @@ public class ResilientGameProfileClient implements GameProfileClient {
         for (ProfileProviderClient provider : providers) {
             circuits.put(provider.provider(), new CircuitState());
         }
+        log.info("Profile provider order={}", this.providers.stream().map(ProfileProviderClient::provider).toList());
     }
 
     @Override
     public PublicGameProfile fetch(String uid, boolean forceUpdate) {
         Instant now = clock.instant();
+        String maskedUid = maskUid(uid);
         CacheEntry cached = cache.get(uid);
         if (!forceUpdate && cached != null && now.isBefore(cached.expiresAt())) {
+            log.info("PROFILE shared JVM cache hit uid={} provider={}", maskedUid, cached.profile().provider());
             return cached.profile();
         }
 
@@ -52,30 +59,76 @@ public class ResilientGameProfileClient implements GameProfileClient {
         AppException lookupFailure = null;
         for (ProfileProviderClient provider : providers) {
             CircuitState circuit = circuits.get(provider.provider());
-            if (circuit.isOpen(now)) continue;
+            if (circuit.isOpen(now)) {
+                log.warn(
+                        "PROFILE provider skipped because circuit is open provider={} uid={} retryAt={}",
+                        provider.provider(),
+                        maskedUid,
+                        circuit.openUntil
+                );
+                continue;
+            }
+
+            log.info("PROFILE provider attempt provider={} uid={} forceUpdate={}", provider.provider(), maskedUid, forceUpdate);
             try {
                 PublicGameProfile profile = provider.fetch(uid, forceUpdate);
                 circuit.success();
                 cache.put(uid, new CacheEntry(profile, now.plus(properties.cacheTtl())));
+                log.info(
+                        "PROFILE provider success provider={} uid={} characters={}",
+                        provider.provider(),
+                        maskedUid,
+                        profile.characters().size()
+                );
                 return profile;
             } catch (AppException exception) {
                 last = exception;
-                if (exception.getErrorCode() == ErrorCode.UPSTREAM_UNAVAILABLE
-                        || exception.getErrorCode() == ErrorCode.PROFILE_SYNC_COOLDOWN) {
+                ErrorCode errorCode = exception.getErrorCode();
+                log.warn(
+                        "PROFILE provider failure provider={} uid={} errorCode={}",
+                        provider.provider(),
+                        maskedUid,
+                        errorCode
+                );
+
+                if (errorCode == ErrorCode.UPSTREAM_UNAVAILABLE
+                        || errorCode == ErrorCode.PROFILE_UPSTREAM_THROTTLED) {
                     circuit.failure(now, properties.circuitFailureThreshold(),
                             properties.circuitOpenDuration());
+                    log.warn(
+                            "PROFILE fallback after provider failure provider={} uid={} failures={} circuitOpenUntil={}",
+                            provider.provider(),
+                            maskedUid,
+                            circuit.failures,
+                            circuit.openUntil
+                    );
                     continue;
                 }
-                if (exception.getErrorCode() == ErrorCode.PROFILE_LOOKUP_FAILED) {
+                if (errorCode == ErrorCode.PROFILE_LOOKUP_FAILED) {
                     lookupFailure = exception;
+                    log.info("PROFILE lookup failed on provider={}, trying next provider uid={}", provider.provider(), maskedUid);
                     continue;
                 }
-                if (exception.getErrorCode() == ErrorCode.PROFILE_NOT_PUBLIC) continue;
+                if (errorCode == ErrorCode.PROFILE_NOT_PUBLIC) {
+                    log.info("PROFILE display data missing on provider={}, trying next provider uid={}", provider.provider(), maskedUid);
+                    continue;
+                }
+
+                log.warn("PROFILE request stopped without fallback uid={} errorCode={}", maskedUid, errorCode);
                 throw exception;
             }
         }
-        if (!forceUpdate && cached != null) return cached.profile();
-        if (lookupFailure != null) throw lookupFailure;
+
+        if (!forceUpdate && cached != null) {
+            log.warn("PROFILE all providers failed; serving stale JVM cache uid={} provider={}", maskedUid, cached.profile().provider());
+            return cached.profile();
+        }
+        if (lookupFailure != null) {
+            log.warn("PROFILE all providers exhausted with lookup failure uid={}", maskedUid);
+            throw lookupFailure;
+        }
+        ErrorCode finalCode = last == null ? ErrorCode.UPSTREAM_UNAVAILABLE : last.getErrorCode();
+        log.error("PROFILE all providers failed uid={} finalErrorCode={}", maskedUid, finalCode);
         throw last == null ? new AppException(ErrorCode.UPSTREAM_UNAVAILABLE) : last;
     }
 
@@ -92,6 +145,11 @@ public class ResilientGameProfileClient implements GameProfileClient {
                     retry == null ? null : LocalDateTime.ofInstant(retry, zone)
             );
         }).toList();
+    }
+
+    private String maskUid(String uid) {
+        if (uid == null || uid.length() < 4) return "****";
+        return "*****" + uid.substring(uid.length() - 4);
     }
 
     private record CacheEntry(PublicGameProfile profile, Instant expiresAt) {

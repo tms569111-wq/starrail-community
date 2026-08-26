@@ -80,6 +80,20 @@ app:
   enka:
     base-url: ${ENKA_BASE_URL:https://enka.network}
     user-agent: ${ENKA_USER_AGENT:StarrailHearing/0.1 contact=local-development}
+    # 아래 값들은 모두 재배포 시 환경변수만 바꿔 조정할 수 있습니다.
+    # Enka가 ttl을 누락했을 때만 쓰는 안전 기본값입니다. 실제 ttl이 있으면 그 값을 우선합니다.
+    cache-default-ttl: ${ENKA_CACHE_DEFAULT_TTL:60s}
+    cache-max-entries: ${ENKA_CACHE_MAX_ENTRIES:5000}
+    # 단일 Spring 인스턴스 전체에서 Enka 요청 시작 속도를 제한합니다.
+    max-requests-per-second: ${ENKA_MAX_REQUESTS_PER_SECOND:2}
+    # 실제 Enka HTTP 요청이 동시에 진행될 수 있는 최대 개수입니다.
+    max-concurrent-requests: ${ENKA_MAX_CONCURRENT_REQUESTS:8}
+    # 위 동시 처리 슬롯 밖에서 짧게 기다릴 수 있는 요청 수입니다.
+    max-waiting-requests: ${ENKA_MAX_WAITING_REQUESTS:30}
+    # rate-limit/동시 처리 슬롯을 기다릴 최대 시간입니다. 초과하면 사용자에게 재시도를 안내합니다.
+    request-wait-timeout: ${ENKA_REQUEST_WAIT_TIMEOUT:15s}
+    # Enka가 HTTP 429를 주면 이 시간 이상 전체 Enka 요청을 쉬고 MiHoMo fallback을 사용합니다.
+    backoff-on-429: ${ENKA_BACKOFF_ON_429:30s}
   profile-client:
     cache-ttl: ${PROFILE_CACHE_TTL:20s}
     circuit-failure-threshold: ${PROFILE_CIRCUIT_FAILURE_THRESHOLD:3}
