@@ -279,6 +279,15 @@ img {
     align-items: center;
 }
 
+.badge-history > div {
+    display: grid;
+    gap: 2px;
+}
+
+.badge-history > form {
+    margin-left: auto;
+}
+
 .account-status-row span {
     padding: 4px 9px;
     border: 1px solid var(--line);
@@ -337,9 +346,11 @@ img {
 
 .stack-form input,
 .stack-form select,
-.admin-action-form input,
+.admin-action-form input:not([type="checkbox"]),
 .admin-action-form select,
+.admin-action-form textarea,
 .admin-member input,
+.admin-member textarea,
 .report-form select,
 .report-form textarea,
 .inline-edit textarea {
@@ -402,6 +413,26 @@ img {
     padding: 8px 12px;
     border: 1px solid var(--line);
     border-radius: 999px;
+}
+
+.admin-nav a.is-active,
+.admin-pagination a.is-active {
+    border-color: rgba(240, 202, 123, 0.58);
+    color: var(--gold-strong);
+    background: rgba(240, 202, 123, 0.1);
+}
+
+.admin-overview {
+    margin-top: 24px;
+}
+
+.admin-overview h2 {
+    margin: 8px 0;
+}
+
+.admin-overview p {
+    margin-bottom: 0;
+    color: var(--muted);
 }
 
 .admin-grid-form {
@@ -520,8 +551,19 @@ img {
     gap: 8px;
 }
 
-.admin-action-form input {
+.admin-action-form {
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.admin-action-form input:not([type="checkbox"]) {
     flex: 1;
+}
+
+.admin-action-form label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .admin-member__identity {
@@ -542,7 +584,31 @@ img {
 
 .admin-member__forms form {
     display: flex;
+    flex-wrap: wrap;
     gap: 7px;
+}
+
+.admin-member__forms .admin-action-form {
+    min-width: min(620px, 100%);
+    flex: 1 1 620px;
+}
+
+.admin-note-field {
+    width: 100%;
+    min-height: 96px;
+    flex: 1 1 100%;
+    resize: vertical;
+    line-height: 1.6;
+}
+
+.admin-pagination {
+    justify-content: center;
+    margin-top: 22px;
+}
+
+.admin-pagination a {
+    min-width: 38px;
+    text-align: center;
 }
 
 .badge-form input {
@@ -1171,6 +1237,80 @@ img {
     color: var(--muted);
     font-size: 12px;
     text-align: center;
+}
+
+.notification-dialog {
+    width: min(620px, calc(100% - 32px));
+    max-height: min(760px, calc(100vh - 48px));
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    border-radius: 20px;
+    color: var(--text);
+    background: #101627;
+    box-shadow: var(--shadow);
+    text-align: left;
+}
+
+.notification-dialog::backdrop {
+    background: rgba(2, 4, 10, 0.78);
+    backdrop-filter: blur(4px);
+}
+
+.notification-dialog__heading,
+.notification-dialog > form {
+    padding: 22px 24px;
+}
+
+.notification-dialog__heading {
+    border-bottom: 1px solid var(--line);
+}
+
+.notification-dialog__heading h2 {
+    margin: 7px 0 2px;
+}
+
+.notification-dialog__heading p,
+.notification-card p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.notification-dialog__list {
+    display: grid;
+    max-height: 430px;
+    padding: 6px 24px;
+    overflow-y: auto;
+}
+
+.notification-card {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.notification-card:last-child {
+    border-bottom: 0;
+}
+
+.notification-card strong,
+.notification-card p,
+.notification-card time {
+    display: block;
+}
+
+.notification-card p {
+    margin-top: 6px;
+    white-space: pre-wrap;
+}
+
+.notification-card time {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.notification-dialog > form {
+    border-top: 1px solid var(--line);
 }
 
 .page-shell {

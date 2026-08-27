@@ -2,6 +2,7 @@ package com.starrailhearing.member.service;
 
 import com.starrailhearing.common.exception.AppException;
 import com.starrailhearing.common.exception.ErrorCode;
+import com.starrailhearing.common.web.PagedView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
@@ -49,8 +50,8 @@ public class TitleVerificationService {
         return persistenceService.hasVerifiedProfile(memberId);
     }
 
-    public List<TitleRequestView> adminViews(long operatorId) {
-        return persistenceService.adminViews(operatorId);
+    public PagedView<TitleRequestView> adminViews(long operatorId, int page) {
+        return persistenceService.adminViews(operatorId, page);
     }
 
     public ImageContent image(long operatorId, long requestId) {

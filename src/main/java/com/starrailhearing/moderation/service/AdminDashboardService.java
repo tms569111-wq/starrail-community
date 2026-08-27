@@ -1,7 +1,7 @@
 package com.starrailhearing.moderation.service;
 
 import com.starrailhearing.comment.repository.CharacterCommentRepository;
-import com.starrailhearing.config.AppProperties;
+import com.starrailhearing.common.web.PagedView;
 import com.starrailhearing.member.domain.MemberAccount;
 import com.starrailhearing.member.service.BadgeService;
 import com.starrailhearing.member.service.BadgeView;
@@ -10,25 +10,27 @@ import com.starrailhearing.moderation.domain.ReportStatus;
 import com.starrailhearing.moderation.repository.CommentReportRepository;
 import com.starrailhearing.moderation.repository.ModerationActionRepository;
 import com.starrailhearing.vote.repository.CharacterVoteRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
 
 @Service
 @Transactional(readOnly = true)
 public class AdminDashboardService {
+    private static final int PAGE_SIZE = 20;
+    private static final int MAXIMUM_PAGES = 5;
+
     private final MemberService memberService;
     private final BadgeService badgeService;
     private final CommentReportRepository reportRepository;
     private final ModerationActionRepository actionRepository;
     private final CharacterVoteRepository voteRepository;
     private final CharacterCommentRepository commentRepository;
-    private final AppProperties properties;
     private final Clock clock;
 
     public AdminDashboardService(
@@ -38,7 +40,6 @@ public class AdminDashboardService {
             ModerationActionRepository actionRepository,
             CharacterVoteRepository voteRepository,
             CharacterCommentRepository commentRepository,
-            AppProperties properties,
             Clock clock
     ) {
         this.memberService = memberService;
@@ -47,53 +48,61 @@ public class AdminDashboardService {
         this.actionRepository = actionRepository;
         this.voteRepository = voteRepository;
         this.commentRepository = commentRepository;
-        this.properties = properties;
         this.clock = clock;
     }
 
-    public AdminDashboardView view(long operatorId) {
+    public AdminDashboardView.Summary summary(long operatorId) {
         memberService.requireAdmin(operatorId);
-        List<MemberAccount> members = memberService.recentMembers();
-        Map<Long, BadgeView> badges = badgeService.findForMembers(
-                members.stream().map(MemberAccount::getId).toList(),
-                properties.operator().platinumVersion()
-        );
         LocalDateTime monthStart = LocalDate.now(clock).withDayOfMonth(1).atStartOfDay();
+        return new AdminDashboardView.Summary(
+                memberService.count(), memberService.countActive(), memberService.countSuspended(),
+                memberService.countJoinedSince(monthStart), memberService.countDeletedSince(monthStart),
+                reportRepository.countByStatus(ReportStatus.PENDING),
+                voteRepository.count(), commentRepository.count()
+        );
+    }
 
-        var memberRows = members.stream().map(member -> new AdminDashboardView.MemberRow(
+    public PagedView<AdminDashboardView.MemberRow> members(long operatorId, int page) {
+        memberService.requireAdmin(operatorId);
+        var members = memberService.recentMembers(pageRequest(page));
+        Map<Long, BadgeView> badges = badgeService.findLatestForMembers(
+                members.getContent().stream().map(MemberAccount::getId).toList()
+        );
+        return PagedView.from(members, member -> new AdminDashboardView.MemberRow(
                 member.getId(), member.getNickname(), member.getEmail(), member.getRole(),
                 member.getStatus(), member.isNicknameConfigured(), member.getSuspendedUntil(),
                 member.getSuspensionReason(), member.getCreatedAt(), badges.get(member.getId())
-        )).toList();
+        ), MAXIMUM_PAGES);
+    }
 
-        var reportRows = reportRepository.findTop100ByOrderByCreatedAtDesc().stream()
-                .map(report -> new AdminDashboardView.ReportRow(
+    public PagedView<AdminDashboardView.ReportRow> reports(long operatorId, int page) {
+        memberService.requireAdmin(operatorId);
+        return PagedView.from(reportRepository.findAdminPage(pageRequest(page)),
+                report -> new AdminDashboardView.ReportRow(
                         report.getId(), report.getReason(), report.getReason().getLabel(), report.getDetails(),
                         report.getStatus(), report.getReporter().getNickname(),
                         report.getComment().getMember().getId(), report.getComment().getMember().getNickname(),
                         report.getComment().getEvaluation().getCharacter().getName(),
                         report.getComment().getId(), report.getComment().getStatus(), report.getContentSnapshot(),
+                        report.getResolutionNote(), report.getResolvedAt(),
                         report.getCreatedAt()
-                )).toList();
+                ), MAXIMUM_PAGES);
+    }
 
-        var actionRows = actionRepository.findTop30ByOrderByCreatedAtDesc().stream()
-                .map(action -> new AdminDashboardView.ActionRow(
+    public PagedView<AdminDashboardView.ActionRow> actions(long operatorId, int page) {
+        memberService.requireAdmin(operatorId);
+        return PagedView.from(actionRepository.findAllByOrderByCreatedAtDescIdDesc(pageRequest(page)),
+                action -> new AdminDashboardView.ActionRow(
                         action.getId(), action.getOperator().getNickname(),
                         action.getTarget() == null
                                 ? action.getTargetType() + " #" + action.getTargetId()
                                 : action.getTarget().getNickname(),
                         action.getTargetType(), action.getTargetId(), action.getActionType(),
                         action.getReason(), action.getBeforeState(), action.getAfterState(), action.getCreatedAt()
-                )).toList();
+                ), MAXIMUM_PAGES);
+    }
 
-        return new AdminDashboardView(
-                new AdminDashboardView.Summary(
-                        memberService.count(), memberService.countActive(), memberService.countSuspended(),
-                        memberService.countJoinedSince(monthStart), memberService.countDeletedSince(monthStart),
-                        reportRepository.countByStatus(ReportStatus.PENDING),
-                        voteRepository.count(), commentRepository.count()
-                ),
-                memberRows, reportRows, actionRows
-        );
+    private PageRequest pageRequest(int page) {
+        return PageRequest.of(Math.max(0, Math.min(page, MAXIMUM_PAGES - 1)), PAGE_SIZE);
     }
 }

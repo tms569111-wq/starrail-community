@@ -1,6 +1,7 @@
 package com.starrailhearing.web;
 
 import com.starrailhearing.common.exception.AppException;
+import com.starrailhearing.common.exception.ErrorCode;
 import com.starrailhearing.member.service.CurrentMemberProvider;
 import com.starrailhearing.profile.service.ProfileSyncResult;
 import com.starrailhearing.profile.service.ProfileVerificationService;
@@ -72,7 +73,9 @@ public class ProfileController {
                     )
             );
         } catch (AppException exception) {
-            redirect.addFlashAttribute("errorMessage", exception.getMessage());
+            if (exception.getErrorCode() != ErrorCode.PROFILE_SYNC_COOLDOWN) {
+                redirect.addFlashAttribute("errorMessage", exception.getMessage());
+            }
         }
     }
 }

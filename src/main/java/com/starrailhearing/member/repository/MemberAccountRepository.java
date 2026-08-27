@@ -4,6 +4,8 @@ import com.starrailhearing.member.domain.MemberAccount;
 import com.starrailhearing.member.domain.AuthProvider;
 import com.starrailhearing.member.domain.MemberStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,7 +29,7 @@ public interface MemberAccountRepository extends JpaRepository<MemberAccount, Lo
 
     boolean existsByNicknameNormalizedAndIdNot(String nicknameNormalized, Long memberId);
 
-    List<MemberAccount> findTop100ByOrderByCreatedAtDesc();
+    Page<MemberAccount> findAllByOrderByCreatedAtDescIdDesc(Pageable pageable);
 
     long countByStatus(MemberStatus status);
 

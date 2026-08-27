@@ -88,6 +88,26 @@ public class BadgeService {
                 .stream().map(this::toView).toList();
     }
 
+    public BadgeView findLatestActive(long memberId) {
+        return repository.findByMember_IdAndActiveTrueOrderByGameVersionDesc(memberId)
+                .stream()
+                .max((left, right) -> compareVersions(left.getGameVersion(), right.getGameVersion()))
+                .map(this::toView)
+                .orElse(null);
+    }
+
+    public Map<Long, BadgeView> findLatestForMembers(Collection<Long> memberIds) {
+        if (memberIds.isEmpty()) return Map.of();
+        return repository.findByMember_IdInAndBadgeTypeAndActiveTrue(memberIds, BadgeType.PLATINUM)
+                .stream()
+                .collect(Collectors.toMap(
+                        badge -> badge.getMember().getId(),
+                        this::toView,
+                        (left, right) -> compareVersions(left.version(), right.version()) >= 0
+                                ? left : right
+                ));
+    }
+
     private BadgeView toView(MemberBadge badge) {
         return new BadgeView(badge.getGameVersion(), badge.getLabel(), badge.getColorHex());
     }
@@ -98,5 +118,18 @@ public class BadgeService {
             throw new IllegalArgumentException("게임 버전 값을 확인해 주세요.");
         }
         return normalized;
+    }
+
+    private int compareVersions(String left, String right) {
+        String[] leftParts = left.split("\\.");
+        String[] rightParts = right.split("\\.");
+        int length = Math.max(leftParts.length, rightParts.length);
+        for (int index = 0; index < length; index++) {
+            int leftValue = index < leftParts.length ? Integer.parseInt(leftParts[index]) : 0;
+            int rightValue = index < rightParts.length ? Integer.parseInt(rightParts[index]) : 0;
+            int compared = Integer.compare(leftValue, rightValue);
+            if (compared != 0) return compared;
+        }
+        return 0;
     }
 }

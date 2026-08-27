@@ -28,4 +28,10 @@ public interface MemberBadgeRepository extends JpaRepository<MemberBadge, Long> 
 
     @EntityGraph(attributePaths = {"member"})
     List<MemberBadge> findByMember_IdAndActiveTrueOrderByGameVersionDesc(Long memberId);
+
+    @EntityGraph(attributePaths = {"member"})
+    List<MemberBadge> findByMember_IdInAndBadgeTypeAndActiveTrue(
+            Collection<Long> memberIds,
+            BadgeType badgeType
+    );
 }

@@ -74,6 +74,9 @@
             </label>
             <button class="button button--primary" type="submit">이상중재 칭호 신청</button>
         </form>
+        <p th:if="${member.status.name() == 'ACTIVE' and member.nicknameConfigured and titleProfileVerified and titleVersions.isEmpty()}">
+            현재 신청 가능한 Version 4.5 이후 버전이 없습니다.
+        </p>
         <p th:if="${member.status.name() == 'ACTIVE' and !member.nicknameConfigured}">먼저 이 페이지에서 닉네임을 확정해 주세요.</p>
         <p th:if="${member.status.name() == 'ACTIVE' and member.nicknameConfigured and !titleProfileVerified}">
             칭호를 신청하려면 <a th:href="@{/me/profile}">UID 인증을 먼저 완료</a>해 주세요.
@@ -109,6 +112,5 @@
 
 </main>
 <footer th:replace="~{fragments/site :: footer}"></footer>
-<script th:src="@{/js/app.js}"></script>
 </body>
 </html>

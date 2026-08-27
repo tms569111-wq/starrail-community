@@ -11,6 +11,8 @@ import com.starrailhearing.member.repository.MemberAccountRepository;
 import com.starrailhearing.member.repository.MemberNicknameHistoryRepository;
 import com.starrailhearing.config.AppProperties;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -213,8 +215,8 @@ public class MemberService {
         return target;
     }
 
-    public java.util.List<MemberAccount> recentMembers() {
-        return repository.findTop100ByOrderByCreatedAtDesc();
+    public Page<MemberAccount> recentMembers(Pageable pageable) {
+        return repository.findAllByOrderByCreatedAtDescIdDesc(pageable);
     }
 
     public long count() { return repository.count(); }

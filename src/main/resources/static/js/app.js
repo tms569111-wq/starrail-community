@@ -10,6 +10,15 @@
         if (heading && flashes.length > 0) heading.after(...flashes);
     }
 
+    const notificationDialog = document.querySelector('[data-notification-dialog]');
+    if (notificationDialog && !notificationDialog.open) {
+        if (typeof notificationDialog.showModal === 'function') {
+            notificationDialog.showModal();
+        } else {
+            notificationDialog.setAttribute('open', '');
+        }
+    }
+
     document.querySelectorAll('[data-copy-target]').forEach(button => {
         button.addEventListener('click', async () => {
             const target = document.getElementById(button.dataset.copyTarget);

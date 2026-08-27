@@ -31,8 +31,9 @@ public class AdminAuditService {
     ) {
         MemberAccount operator = memberService.requireAdmin(operatorId);
         MemberAccount target = targetMemberId == null ? null : memberService.require(targetMemberId);
-        repository.save(new ModerationAction(
+        repository.saveAndFlush(new ModerationAction(
                 operator, target, targetType, targetId, type, reason, beforeState, afterState
         ));
+        repository.deleteOutsideLatestOneHundred();
     }
 }

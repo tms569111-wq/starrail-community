@@ -13,22 +13,33 @@
     <div class="flash flash--error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
     <nav class="admin-nav">
-        <a href="#versions">버전</a><a href="#characters">캐릭터</a><a href="#reports">신고</a>
-        <a href="#titles">칭호</a><a href="#members">회원</a><a href="#history">감사 기록</a>
+        <a th:href="@{/admin}" th:classappend="${activeSection == 'overview'} ? ' is-active'">요약</a>
+        <a th:href="@{/admin(section='versions')}" th:classappend="${activeSection == 'versions'} ? ' is-active'">버전</a>
+        <a th:href="@{/admin(section='characters')}" th:classappend="${activeSection == 'characters'} ? ' is-active'">캐릭터</a>
+        <a th:href="@{/admin(section='reports')}" th:classappend="${activeSection == 'reports'} ? ' is-active'">신고</a>
+        <a th:href="@{/admin(section='titles')}" th:classappend="${activeSection == 'titles'} ? ' is-active'">칭호</a>
+        <a th:href="@{/admin(section='members')}" th:classappend="${activeSection == 'members'} ? ' is-active'">회원</a>
+        <a th:href="@{/admin(section='history')}" th:classappend="${activeSection == 'history'} ? ' is-active'">운영 기록</a>
     </nav>
 
     <section class="admin-stats">
-        <div><strong th:text="${dashboard.summary.totalMembers}">0</strong><span>전체 회원</span></div>
-        <div><strong th:text="${dashboard.summary.activeMembers}">0</strong><span>활성 회원</span></div>
-        <div><strong th:text="${dashboard.summary.suspendedMembers}">0</strong><span>차단 회원</span></div>
-        <div><strong th:text="${dashboard.summary.joinedThisMonth}">0</strong><span>이번 달 가입</span></div>
-        <div><strong th:text="${dashboard.summary.deletedThisMonth}">0</strong><span>이번 달 탈퇴</span></div>
-        <div><strong th:text="${dashboard.summary.pendingReports}">0</strong><span>대기 신고</span></div>
-        <div><strong th:text="${dashboard.summary.votes}">0</strong><span>원시 투표</span></div>
-        <div><strong th:text="${dashboard.summary.comments}">0</strong><span>댓글·답글</span></div>
+        <div><strong th:text="${summary.totalMembers}">0</strong><span>전체 회원</span></div>
+        <div><strong th:text="${summary.activeMembers}">0</strong><span>활성 회원</span></div>
+        <div><strong th:text="${summary.suspendedMembers}">0</strong><span>차단 회원</span></div>
+        <div><strong th:text="${summary.joinedThisMonth}">0</strong><span>이번 달 가입</span></div>
+        <div><strong th:text="${summary.deletedThisMonth}">0</strong><span>이번 달 탈퇴</span></div>
+        <div><strong th:text="${summary.pendingReports}">0</strong><span>대기 신고</span></div>
+        <div><strong th:text="${summary.votes}">0</strong><span>원시 투표</span></div>
+        <div><strong th:text="${summary.comments}">0</strong><span>댓글·답글</span></div>
     </section>
 
-    <section class="admin-section" id="versions">
+    <section class="panel admin-overview" th:if="${activeSection == 'overview'}">
+        <span class="eyebrow">LAZY ADMIN PAGES</span>
+        <h2>관리할 항목을 선택해 주세요</h2>
+        <p>위 메뉴를 눌렀을 때 해당 데이터만 조회합니다. 긴 목록은 페이지당 20개, 최대 5페이지로 표시합니다.</p>
+    </section>
+
+    <section class="admin-section" id="versions" th:if="${activeSection == 'versions'}">
         <div class="section-heading section-heading--compact"><div><span class="eyebrow">VERSION LIFECYCLE</span><h2>평가 버전</h2></div></div>
         <form class="admin-action-form" method="post" th:action="@{/admin/versions}">
             <input name="versionCode" maxlength="20" placeholder="예: 4.5" required>
@@ -55,7 +66,7 @@
         </div>
     </section>
 
-    <section class="admin-section" id="characters">
+    <section class="admin-section" id="characters" th:if="${activeSection == 'characters'}">
         <div class="section-heading section-heading--compact"><div><span class="eyebrow">CHARACTER CATALOG</span><h2>캐릭터·외부 ID</h2></div></div>
         <details class="admin-card"><summary>새 캐릭터 추가</summary>
             <form class="admin-grid-form" method="post" th:action="@{/admin/characters}">
@@ -95,9 +106,9 @@
         </details>
     </section>
 
-    <section class="admin-section" id="reports">
+    <section class="admin-section" id="reports" th:if="${activeSection == 'reports'}">
         <div class="section-heading section-heading--compact"><div><span class="eyebrow">REPORT QUEUE</span><h2>댓글·답글 신고</h2></div></div>
-        <div class="admin-card" th:each="report : ${dashboard.reports}">
+        <div class="admin-card" th:each="report : ${reportPage.items}">
             <div class="admin-card__heading">
                 <div><span class="status-chip" th:text="${report.status}">PENDING</span><strong th:text="|${report.reasonLabel} · ${report.characterName}|">신고</strong></div>
                 <time th:text="${report.createdAt}">일시</time>
@@ -105,41 +116,51 @@
             <p><strong th:text="|신고자: ${report.reporterNickname} / 작성자: ${report.authorNickname}|">사용자</strong></p>
             <blockquote th:text="${report.contentSnapshot}">접수 당시 내용</blockquote>
             <p th:if="${report.details != null}" th:text="${report.details}">추가 설명</p>
+            <p th:if="${report.resolutionNote != null}"
+               th:text="|처리 메모: ${report.resolutionNote} · ${report.resolvedAt}|">처리 결과</p>
             <form class="admin-action-form" th:if="${report.status.name() == 'PENDING'}" method="post"
                   th:action="@{/admin/reports/{id}(id=${report.id})}">
                 <select name="decision"><option value="ACTION">조치 후 종결</option><option value="DISMISS">신고 기각</option></select>
                 <label><input type="checkbox" name="hideComment" value="true"> 댓글 숨김</label>
-                <select name="sanction"><option value="">회원 제재 없음</option><option th:each="period : ${sanctionOptions}" th:value="${period.name()}" th:text="${period.name()}">기간</option></select>
-                <input name="note" maxlength="500" placeholder="처리 메모" required>
+                <select name="sanction"><option value="">회원 제재 없음</option><option th:each="period : ${sanctionOptions}" th:value="${period.name()}" th:text="${period.label}">기간</option></select>
+                <textarea class="admin-note-field" name="note" maxlength="500" rows="4" placeholder="처리 메모와 사용자에게 표시할 처리 이유" required></textarea>
                 <button class="button button--primary button--small" type="submit">처리</button>
             </form>
             <form class="admin-action-form" th:if="${report.commentStatus.name() == 'HIDDEN_BY_MODERATOR'}"
                   method="post" th:action="@{/admin/comments/{id}/restore(id=${report.commentId})}">
-                <input name="reason" maxlength="500" placeholder="복원 사유" required>
+                <textarea class="admin-note-field" name="reason" maxlength="500" rows="3" placeholder="복원 사유" required></textarea>
                 <button class="button button--secondary button--small" type="submit">댓글 복원</button>
             </form>
         </div>
-        <p class="empty-inline" th:if="${dashboard.reports.isEmpty()}">접수된 신고가 없습니다.</p>
+        <p class="empty-inline" th:if="${reportPage.items.isEmpty()}">접수된 신고가 없습니다.</p>
+        <nav class="pagination admin-pagination" th:if="${reportPage.totalPages > 1}">
+            <a th:each="pageNumber : ${reportPage.pageNumbers}" th:href="@{/admin(section='reports',page=${pageNumber})}"
+               th:classappend="${pageNumber == reportPage.page} ? ' is-active'" th:text="${pageNumber + 1}">1</a>
+        </nav>
     </section>
 
-    <section class="admin-section" id="titles">
+    <section class="admin-section" id="titles" th:if="${activeSection == 'titles'}">
         <div class="section-heading section-heading--compact"><div><span class="eyebrow">PRIVATE EVIDENCE</span><h2>칭호 인증</h2></div></div>
-        <div class="admin-card" th:each="request : ${titleRequests}">
+        <div class="admin-card" th:each="request : ${titleRequestPage.items}">
             <div class="admin-card__heading"><strong th:text="|${request.memberNickname} · Version ${request.gameVersion}|">신청</strong><span class="status-chip" th:text="${request.status.label}">검토 대기</span></div>
             <a th:if="${request.imageAvailable}" target="_blank" rel="noopener" th:href="@{/admin/title-requests/{id}/image(id=${request.id})}">비공개 증빙 열기</a>
             <p th:if="${request.reviewNote != null}" th:text="${request.reviewNote}">검토 메모</p>
             <form class="admin-action-form" th:if="${request.status.name() == 'PENDING'}" method="post" th:action="@{/admin/title-requests/{id}(id=${request.id})}">
                 <select name="approve"><option value="true">승인</option><option value="false">거절</option></select>
-                <input name="note" maxlength="500" placeholder="검토 메모" required>
+                <textarea class="admin-note-field" name="note" maxlength="500" rows="4" placeholder="신청자에게 표시할 검토 메모" required></textarea>
                 <button class="button button--primary button--small" type="submit">결정 및 파일 삭제</button>
             </form>
         </div>
-        <p class="empty-inline" th:if="${titleRequests.isEmpty()}">접수된 칭호 인증 신청이 없습니다.</p>
+        <p class="empty-inline" th:if="${titleRequestPage.items.isEmpty()}">접수된 칭호 인증 신청이 없습니다.</p>
+        <nav class="pagination admin-pagination" th:if="${titleRequestPage.totalPages > 1}">
+            <a th:each="pageNumber : ${titleRequestPage.pageNumbers}" th:href="@{/admin(section='titles',page=${pageNumber})}"
+               th:classappend="${pageNumber == titleRequestPage.page} ? ' is-active'" th:text="${pageNumber + 1}">1</a>
+        </nav>
     </section>
 
-    <section class="admin-section" id="members">
+    <section class="admin-section" id="members" th:if="${activeSection == 'members'}">
         <div class="section-heading section-heading--compact"><div><span class="eyebrow">MEMBERS</span><h2>회원 작성 권한</h2></div></div>
-        <div class="admin-member" th:each="member : ${dashboard.members}">
+        <div class="admin-member" th:each="member : ${memberPage.items}">
             <div class="admin-member__identity">
                 <strong th:text="${member.nickname}">닉네임</strong><span th:text="${member.email ?: '이메일 없음'}">이메일</span>
                 <span th:if="${member.status.name() != 'SUSPENDED'}" th:text="|#${member.id} · ${member.role} · ${member.status}|">상태</span>
@@ -149,12 +170,12 @@
             </div>
             <div class="admin-member__forms" th:if="${member.role.name() != 'ADMIN' and member.status.name() != 'DELETED'}">
                 <form class="admin-action-form" method="post" th:action="@{/admin/members/{id}/sanctions(id=${member.id})}">
-                    <select name="period"><option th:each="period : ${sanctionOptions}" th:value="${period.name()}" th:text="${period.name()}">기간</option></select>
-                    <input name="reason" maxlength="500" placeholder="경고·정지 사유" required>
+                    <select name="period"><option th:each="period : ${sanctionOptions}" th:value="${period.name()}" th:text="${period.label}">기간</option></select>
+                    <textarea class="admin-note-field" name="reason" maxlength="500" rows="3" placeholder="회원에게 표시할 경고·정지 사유" required></textarea>
                     <button class="button button--danger button--small" type="submit">제재 기록</button>
                 </form>
-                <form method="post" th:if="${member.status.name() == 'SUSPENDED'}" th:action="@{/admin/members/{id}/restore(id=${member.id})}">
-                    <input name="reason" maxlength="500" placeholder="복원 사유" required>
+                <form class="admin-action-form" method="post" th:if="${member.status.name() == 'SUSPENDED'}" th:action="@{/admin/members/{id}/restore(id=${member.id})}">
+                    <textarea class="admin-note-field" name="reason" maxlength="500" rows="3" placeholder="회원에게 표시할 복원 사유" required></textarea>
                     <button class="button button--secondary button--small" type="submit">작성 권한 복원</button>
                 </form>
                 <form method="post" th:if="${member.badge != null}" th:action="@{/admin/members/{id}/badge/revoke(id=${member.id})}">
@@ -163,16 +184,27 @@
                 </form>
             </div>
         </div>
+        <p class="empty-inline" th:if="${memberPage.items.isEmpty()}">표시할 회원이 없습니다.</p>
+        <nav class="pagination admin-pagination" th:if="${memberPage.totalPages > 1}">
+            <a th:each="pageNumber : ${memberPage.pageNumbers}" th:href="@{/admin(section='members',page=${pageNumber})}"
+               th:classappend="${pageNumber == memberPage.page} ? ' is-active'" th:text="${pageNumber + 1}">1</a>
+        </nav>
     </section>
 
-    <section class="admin-section" id="history">
+    <section class="admin-section" id="history" th:if="${activeSection == 'history'}">
         <div class="section-heading section-heading--compact"><div><span class="eyebrow">AUDIT LOG</span><h2>변경 불가 운영 기록</h2></div></div>
-        <div class="audit-row" th:each="action : ${dashboard.actions}">
+        <p>최근 100건만 저장하며 페이지당 20건씩 표시합니다.</p>
+        <div class="audit-row" th:each="action : ${actionPage.items}">
             <strong th:text="${action.actionType}">ACTION</strong>
             <span th:text="|${action.operatorNickname} → ${action.targetDisplay}|">대상</span>
             <span th:text="${action.reason}">사유</span><time th:text="${action.createdAt}">일시</time>
             <details><summary>변경 전·후</summary><pre th:text="|${action.beforeState}\n→\n${action.afterState}|">상태</pre></details>
         </div>
+        <p class="empty-inline" th:if="${actionPage.items.isEmpty()}">저장된 운영 기록이 없습니다.</p>
+        <nav class="pagination admin-pagination" th:if="${actionPage.totalPages > 1}">
+            <a th:each="pageNumber : ${actionPage.pageNumbers}" th:href="@{/admin(section='history',page=${pageNumber})}"
+               th:classappend="${pageNumber == actionPage.page} ? ' is-active'" th:text="${pageNumber + 1}">1</a>
+        </nav>
         <h3>프로필 공급자 회로</h3>
         <p th:each="provider : ${profileProviders}" th:text="|${provider.provider} · 실패 ${provider.consecutiveFailures} · 회로 ${provider.circuitOpen ? 'OPEN' : 'CLOSED'}|">상태</p>
     </section>
