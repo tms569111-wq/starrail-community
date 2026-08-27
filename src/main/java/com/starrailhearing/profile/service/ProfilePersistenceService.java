@@ -45,6 +45,7 @@ public class ProfilePersistenceService {
         this.aliasRepository = aliasRepository;
     }
 
+    @Transactional
     public void requireUidAvailableForMember(long memberId, String uid) {
         memberService.requireActive(memberId);
         profileRepository.findByUid(uid)
