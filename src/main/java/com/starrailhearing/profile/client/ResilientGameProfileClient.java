@@ -84,37 +84,36 @@ public class ResilientGameProfileClient implements GameProfileClient {
             return cached.profile();
         }
 
-        if (!admissionSlots.tryAcquire()) {
-            log.warn("PROFILE provider queue full uid={}", maskedUid);
-            throw new AppException(ErrorCode.PROFILE_REQUEST_THROTTLED);
+        CompletableFuture<PublicGameProfile> owned = new CompletableFuture<>();
+        CompletableFuture<PublicGameProfile> existing = inFlight.putIfAbsent(uid, owned);
+        if (existing != null) {
+            log.info("PROFILE joined in-flight UID request uid={}", maskedUid);
+            return awaitInFlight(existing, maskedUid);
         }
 
+        boolean admissionAcquired = false;
+        boolean concurrentAcquired = false;
         try {
-            CompletableFuture<PublicGameProfile> owned = new CompletableFuture<>();
-            CompletableFuture<PublicGameProfile> existing = inFlight.putIfAbsent(uid, owned);
-            if (existing != null) {
-                log.info("PROFILE joined in-flight UID request uid={}", maskedUid);
-                return awaitInFlight(existing, maskedUid);
+            admissionAcquired = admissionSlots.tryAcquire();
+            if (!admissionAcquired) {
+                log.warn("PROFILE provider queue full uid={}", maskedUid);
+                throw new AppException(ErrorCode.PROFILE_REQUEST_THROTTLED);
             }
 
-            boolean concurrentAcquired = false;
-            try {
-                concurrentAcquired = acquireConcurrentSlot(maskedUid);
-                PublicGameProfile profile = fetchFromProviders(uid, forceUpdate, cached, maskedUid);
-                owned.complete(profile);
-                return profile;
-            } catch (RuntimeException exception) {
-                owned.completeExceptionally(exception);
-                throw exception;
-            } catch (Error error) {
-                owned.completeExceptionally(error);
-                throw error;
-            } finally {
-                if (concurrentAcquired) concurrentSlots.release();
-                inFlight.remove(uid, owned);
-            }
+            concurrentAcquired = acquireConcurrentSlot(maskedUid);
+            PublicGameProfile profile = fetchFromProviders(uid, forceUpdate, cached, maskedUid);
+            owned.complete(profile);
+            return profile;
+        } catch (RuntimeException exception) {
+            owned.completeExceptionally(exception);
+            throw exception;
+        } catch (Error error) {
+            owned.completeExceptionally(error);
+            throw error;
         } finally {
-            admissionSlots.release();
+            if (concurrentAcquired) concurrentSlots.release();
+            if (admissionAcquired) admissionSlots.release();
+            inFlight.remove(uid, owned);
         }
     }
 

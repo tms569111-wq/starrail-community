@@ -35,3 +35,43 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew clean test --no-daemon
+
+      - name: Validate production Compose file
+        env:
+          DB_URL: jdbc:mysql://database.invalid:3306/starrail_hearing
+          DB_USERNAME: ci_user
+          DB_PASSWORD: ci_password
+          GOOGLE_CLIENT_ID: ci-client-id
+          GOOGLE_CLIENT_SECRET: ci-client-secret
+          APP_ADMIN_SUBJECT: ci-admin
+          MIHOMO_USER_AGENT: StarrailHearing-CI/0.1
+          ENKA_USER_AGENT: StarrailHearing-CI/0.1
+        run: docker compose -f compose.prod.yaml config --quiet
+
+      - name: Start Docker Compose smoke stack
+        env:
+          DB_USERNAME: ci_user
+          DB_PASSWORD: ci_password
+          MYSQL_ROOT_PASSWORD: ci_root_password
+          GOOGLE_CLIENT_ID: ci-client-id
+          GOOGLE_CLIENT_SECRET: ci-client-secret
+          APP_ADMIN_SUBJECT: ci-admin
+          MIHOMO_USER_AGENT: StarrailHearing-CI/0.1
+          ENKA_USER_AGENT: StarrailHearing-CI/0.1
+        run: |
+          docker compose up --detach --build
+          for attempt in {1..60}; do
+            if curl --fail --silent --show-error http://127.0.0.1:8080/actuator/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Show Docker logs after failure
+        if: failure()
+        run: docker compose logs --no-color --tail=200 app db
+
+      - name: Stop Docker Compose smoke stack
+        if: always()
+        run: docker compose down --volumes --remove-orphans
