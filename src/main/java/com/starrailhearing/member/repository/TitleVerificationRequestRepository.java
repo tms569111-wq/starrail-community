@@ -16,10 +16,10 @@ import java.util.Optional;
 public interface TitleVerificationRequestRepository
         extends JpaRepository<TitleVerificationRequest, Long> {
 
-    boolean existsByMember_IdAndGameVersionAndStatus(
+    boolean existsByMember_IdAndGameVersionAndStatusIn(
             Long memberId,
             String gameVersion,
-            TitleRequestStatus status
+            List<TitleRequestStatus> statuses
     );
 
     @EntityGraph(attributePaths = {"member", "reviewedBy"})

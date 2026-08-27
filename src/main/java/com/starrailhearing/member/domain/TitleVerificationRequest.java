@@ -87,6 +87,15 @@ public class TitleVerificationRequest extends BaseTimeEntity {
         return path;
     }
 
+    public String cancel(LocalDateTime now) {
+        requirePending();
+        String path = privateImagePath;
+        status = TitleRequestStatus.CANCELLED;
+        reviewNote = "사용자가 신청을 취소했습니다.";
+        reviewedAt = now;
+        return path;
+    }
+
     private String decide(
             MemberAccount operator,
             String note,

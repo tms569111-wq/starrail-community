@@ -3,6 +3,9 @@ package com.starrailhearing.member.service;
 import com.starrailhearing.common.exception.AppException;
 import com.starrailhearing.common.exception.ErrorCode;
 import com.starrailhearing.config.AppProperties;
+import com.starrailhearing.evaluation.domain.GameVersion;
+import com.starrailhearing.evaluation.domain.VersionStatus;
+import com.starrailhearing.evaluation.repository.GameVersionRepository;
 import com.starrailhearing.member.domain.MemberAccount;
 import com.starrailhearing.member.domain.TitleRequestStatus;
 import com.starrailhearing.member.domain.TitleVerificationRequest;
@@ -11,11 +14,11 @@ import com.starrailhearing.moderation.domain.ModerationActionType;
 import com.starrailhearing.moderation.service.AdminAuditService;
 import com.starrailhearing.profile.domain.ProfileVerificationStatus;
 import com.starrailhearing.profile.repository.GameProfileRepository;
-import com.starrailhearing.evaluation.repository.GameVersionRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigInteger;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,6 +26,17 @@ import java.util.List;
 @Service
 @Transactional(readOnly = true)
 public class TitleRequestPersistenceService {
+    private static final String MINIMUM_APPLICATION_VERSION = "4.5";
+    private static final List<VersionStatus> APPLICATION_STATUSES = List.of(
+            VersionStatus.OPEN,
+            VersionStatus.CLOSING,
+            VersionStatus.CLOSED
+    );
+    private static final List<TitleRequestStatus> SLOT_HOLDING_STATUSES = List.of(
+            TitleRequestStatus.PENDING,
+            TitleRequestStatus.CANCELLED
+    );
+
     private final TitleVerificationRequestRepository repository;
     private final GameProfileRepository profileRepository;
     private final MemberService memberService;
@@ -54,24 +68,9 @@ public class TitleRequestPersistenceService {
 
     @Transactional
     public long create(long memberId, String version, TitleImageStorage.StoredTitleImage image) {
-        MemberAccount member = memberService.requireActiveForWrite(memberId);
-        if (!profileRepository.existsByMember_IdAndVerificationStatus(
-                memberId, ProfileVerificationStatus.VERIFIED
-        )) throw new AppException(ErrorCode.PROFILE_VERIFICATION_REQUIRED);
-        String normalizedVersion = normalizeVersion(version);
-        String applicationVersion = normalizeVersion(properties.operator().platinumVersion());
-        if (!applicationVersion.equals(normalizedVersion)) {
-            throw new AppException(
-                    ErrorCode.INVALID_INPUT,
-                    "현재 칭호 인증을 신청할 수 있는 버전은 " + applicationVersion + "입니다."
-            );
-        }
-        if (versionRepository.findByVersionCode(normalizedVersion).isEmpty()) {
-            throw new AppException(ErrorCode.VERSION_NOT_FOUND);
-        }
-        if (repository.existsByMember_IdAndGameVersionAndStatus(
-                memberId, normalizedVersion, TitleRequestStatus.PENDING
-        )) throw new AppException(ErrorCode.TITLE_REQUEST_ALREADY_EXISTS);
+        ValidatedSubmission submission = validateSubmissionForMember(memberId, version);
+        MemberAccount member = submission.member();
+        String normalizedVersion = submission.version();
         try {
             TitleVerificationRequest request = repository.save(new TitleVerificationRequest(
                     member,
@@ -85,6 +84,42 @@ public class TitleRequestPersistenceService {
         } catch (DataIntegrityViolationException exception) {
             throw new AppException(ErrorCode.TITLE_REQUEST_ALREADY_EXISTS, exception);
         }
+    }
+
+    @Transactional
+    public String validateSubmissionBeforeUpload(long memberId, String version) {
+        return validateSubmissionForMember(memberId, version).version();
+    }
+
+    public List<TitleApplicationVersionView> applicationVersions() {
+        return versionRepository.findAllByStatusInOrderByCreatedAtDesc(APPLICATION_STATUSES).stream()
+                .filter(version -> isAtLeastMinimumVersion(version.getVersionCode()))
+                .map(version -> new TitleApplicationVersionView(
+                        version.getVersionCode(),
+                        versionStatusLabel(version.getStatus())
+                ))
+                .toList();
+    }
+
+    private ValidatedSubmission validateSubmissionForMember(long memberId, String version) {
+        MemberAccount member = memberService.requireActiveForWrite(memberId);
+        if (!profileRepository.existsByMember_IdAndVerificationStatus(
+                memberId, ProfileVerificationStatus.VERIFIED
+        )) throw new AppException(ErrorCode.PROFILE_VERIFICATION_REQUIRED);
+        String normalizedVersion = normalizeVersion(version);
+        if (!isAtLeastMinimumVersion(normalizedVersion)) {
+            throw new AppException(
+                    ErrorCode.INVALID_INPUT,
+                    "이상중재 칭호는 Version " + MINIMUM_APPLICATION_VERSION + " 이후부터 신청할 수 있습니다."
+            );
+        }
+        GameVersion gameVersion = versionRepository.findByVersionCode(normalizedVersion)
+                .filter(candidate -> APPLICATION_STATUSES.contains(candidate.getStatus()))
+                .orElseThrow(() -> new AppException(ErrorCode.VERSION_NOT_FOUND));
+        if (repository.existsByMember_IdAndGameVersionAndStatusIn(
+                memberId, gameVersion.getVersionCode(), SLOT_HOLDING_STATUSES
+        )) throw new AppException(ErrorCode.TITLE_REQUEST_ALREADY_EXISTS);
+        return new ValidatedSubmission(member, gameVersion.getVersionCode());
     }
 
     public List<TitleRequestView> memberViews(long memberId) {
@@ -150,6 +185,21 @@ public class TitleRequestPersistenceService {
     }
 
     @Transactional
+    public EvidenceCleanup cancel(long memberId, long requestId) {
+        memberService.requireActiveForWrite(memberId);
+        TitleVerificationRequest request = repository.findForUpdate(requestId)
+                .orElseThrow(() -> new AppException(ErrorCode.TITLE_REQUEST_NOT_FOUND));
+        if (!request.getMember().getId().equals(memberId)) {
+            throw new AppException(ErrorCode.TITLE_REQUEST_NOT_FOUND);
+        }
+        try {
+            return new EvidenceCleanup(requestId, request.cancel(LocalDateTime.now(clock)));
+        } catch (IllegalStateException exception) {
+            throw new AppException(ErrorCode.INVALID_INPUT, "검토 대기 중인 신청만 취소할 수 있습니다.");
+        }
+    }
+
+    @Transactional
     public List<EvidenceCleanup> expirePending() {
         LocalDateTime now = LocalDateTime.now(clock);
         return repository.findTop100ByStatusAndExpiresAtLessThanEqualOrderByIdAsc(
@@ -171,7 +221,14 @@ public class TitleRequestPersistenceService {
     @Transactional
     public void clearEvidence(long requestId, String expectedPath) {
         repository.findForUpdate(requestId)
-                .ifPresent(request -> request.clearEvidence(expectedPath));
+                .ifPresent(request -> {
+                    if (request.getPrivateImagePath() == null
+                            || !request.getPrivateImagePath().equals(expectedPath)) return;
+                    request.clearEvidence(expectedPath);
+                    if (request.getStatus() == TitleRequestStatus.CANCELLED) {
+                        repository.delete(request);
+                    }
+                });
     }
 
     private TitleRequestView toView(TitleVerificationRequest request) {
@@ -192,6 +249,37 @@ public class TitleRequestPersistenceService {
             throw new AppException(ErrorCode.INVALID_INPUT, "게임 버전을 확인해 주세요.");
         }
         return normalized;
+    }
+
+    private boolean isAtLeastMinimumVersion(String version) {
+        if (version == null || !version.matches("[0-9]+(\\.[0-9]+){1,2}")) return false;
+        String[] candidate = version.split("\\.");
+        String[] minimum = MINIMUM_APPLICATION_VERSION.split("\\.");
+        int length = Math.max(candidate.length, minimum.length);
+        for (int index = 0; index < length; index++) {
+            BigInteger left = index < candidate.length
+                    ? new BigInteger(candidate[index]) : BigInteger.ZERO;
+            BigInteger right = index < minimum.length
+                    ? new BigInteger(minimum[index]) : BigInteger.ZERO;
+            int comparison = left.compareTo(right);
+            if (comparison != 0) return comparison > 0;
+        }
+        return true;
+    }
+
+    private String versionStatusLabel(VersionStatus status) {
+        return switch (status) {
+            case OPEN -> "진행 중";
+            case CLOSING -> "종료 처리 중";
+            case CLOSED -> "종료";
+            case DRAFT -> "준비 중";
+        };
+    }
+
+    private record ValidatedSubmission(MemberAccount member, String version) {
+    }
+
+    public record TitleApplicationVersionView(String versionCode, String statusLabel) {
     }
 
     public record ImageDescriptor(String path, String mimeType) {

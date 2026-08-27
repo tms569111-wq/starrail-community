@@ -131,6 +131,9 @@
             <p><strong th:text="${commentPage.totalElements}">0</strong>개의 의견</p>
         </div>
 
+        <div class="flash flash--success" th:if="${commentSuccessMessage}" th:text="${commentSuccessMessage}"></div>
+        <div class="flash flash--error" th:if="${commentErrorMessage}" th:text="${commentErrorMessage}"></div>
+
         <form class="comment-composer" th:if="${commentPage.canComment}" method="post"
               th:action="@{/characters/{slug}/comments(slug=${character.slug})}">
             <input type="hidden" name="version" th:value="${selectedVersionCode}">

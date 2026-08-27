@@ -60,9 +60,9 @@ public class CommunitySafetyController {
                     ReportReason.from(reason),
                     details
             );
-            redirect.addFlashAttribute("successMessage", "신고를 접수했습니다.");
+            redirect.addFlashAttribute("commentSuccessMessage", "신고를 접수했습니다.");
         } catch (AppException | IllegalArgumentException exception) {
-            redirect.addFlashAttribute("errorMessage", exception.getMessage());
+            redirect.addFlashAttribute("commentErrorMessage", exception.getMessage());
         }
         return redirect(slug, redirectVersion, filter, sort);
     }

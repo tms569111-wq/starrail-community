@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
 
 @Component
 public class TitleImageStorage {
@@ -32,6 +33,7 @@ public class TitleImageStorage {
     private final Path baseDirectory;
     private final long maximumBytes;
     private final int maximumDimension;
+    private final Semaphore imageProcessingSlot = new Semaphore(1, true);
 
     public TitleImageStorage(AppProperties properties) {
         this.baseDirectory = Path.of(properties.titleVerification().privateUploadDir())
@@ -43,7 +45,13 @@ public class TitleImageStorage {
     public StoredTitleImage store(MultipartFile file) {
         if (file == null || file.isEmpty() || file.getSize() > maximumBytes) {
             throw new AppException(ErrorCode.TITLE_IMAGE_INVALID,
-                    "이미지는 700KB 이하인 JPG, PNG 또는 WebP 파일이어야 합니다.");
+                    "이미지는 " + maximumSizeLabel() + " 이하인 JPG, PNG 또는 WebP 파일이어야 합니다.");
+        }
+        if (!imageProcessingSlot.tryAcquire()) {
+            throw new AppException(
+                    ErrorCode.SERVICE_BUSY,
+                    "다른 인증 이미지를 처리하고 있습니다. 잠시 후 다시 시도해 주세요."
+            );
         }
         try {
             Files.createDirectories(baseDirectory);
@@ -62,7 +70,7 @@ public class TitleImageStorage {
                     int height = reader.getHeight(0);
                     if (width < 1 || height < 1 || width > maximumDimension || height > maximumDimension) {
                         throw new AppException(ErrorCode.TITLE_IMAGE_INVALID,
-                                "이미지 가로·세로는 각각 1600px 이하여야 합니다.");
+                                "이미지 가로·세로는 각각 " + maximumDimension + "px 이하여야 합니다.");
                     }
                     BufferedImage source = reader.read(0);
                     return reencode(source);
@@ -74,6 +82,8 @@ public class TitleImageStorage {
             throw exception;
         } catch (IOException exception) {
             throw new AppException(ErrorCode.TITLE_IMAGE_INVALID, "이미지를 안전하게 읽을 수 없습니다.", exception);
+        } finally {
+            imageProcessingSlot.release();
         }
     }
 
@@ -119,7 +129,7 @@ public class TitleImageStorage {
             }
             if (Files.size(temporary) > maximumBytes) {
                 throw new AppException(ErrorCode.TITLE_IMAGE_INVALID,
-                        "안전하게 변환한 이미지가 700KB를 초과합니다.");
+                        "안전하게 변환한 이미지가 " + maximumSizeLabel() + "를 초과합니다.");
             }
             try {
                 Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE);
@@ -141,6 +151,12 @@ public class TitleImageStorage {
 
     private AppException invalid() {
         return new AppException(ErrorCode.TITLE_IMAGE_INVALID);
+    }
+
+    private String maximumSizeLabel() {
+        long mebibyte = 1024L * 1024L;
+        if (maximumBytes % mebibyte == 0) return (maximumBytes / mebibyte) + "MB";
+        return Math.max(1, maximumBytes / 1024L) + "KB";
     }
 
     private void restrict(Path path, String permissions) {

@@ -336,6 +336,7 @@ img {
 }
 
 .stack-form input,
+.stack-form select,
 .admin-action-form input,
 .admin-action-form select,
 .admin-member input,
@@ -348,6 +349,26 @@ img {
     color: var(--text);
     background: rgba(5, 8, 16, 0.74);
     padding: 10px 12px;
+}
+
+.title-request-history {
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.title-request-history__summary {
+    display: grid;
+    gap: 3px;
+}
+
+.title-request-history__summary span {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.title-request-history form {
+    margin-left: auto;
 }
 
 .reply-thread {
