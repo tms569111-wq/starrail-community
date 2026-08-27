@@ -249,6 +249,17 @@ img {
     font-size: 19px;
 }
 
+.auth-card .auth-policy {
+    margin: -6px 0 22px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+.auth-policy a {
+    color: var(--cyan);
+}
+
 .account-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1239,6 +1250,22 @@ img {
     text-align: center;
 }
 
+.site-footer__links {
+    display: flex;
+    margin-top: 10px;
+    justify-content: center;
+    gap: 16px;
+}
+
+.site-footer__links a {
+    color: var(--muted);
+    text-decoration: none;
+}
+
+.site-footer__links a:hover {
+    color: var(--text);
+}
+
 .notification-dialog {
     width: min(620px, calc(100% - 32px));
     max-height: min(760px, calc(100vh - 48px));
@@ -1390,6 +1417,55 @@ img {
     max-width: 650px;
     margin: 12px 0 0;
     color: var(--muted);
+}
+
+.legal-page {
+    width: min(900px, calc(100% - 32px));
+}
+
+.legal-document {
+    display: grid;
+    gap: 0;
+}
+
+.legal-document section {
+    padding: 24px 0;
+    border-top: 1px solid var(--line);
+}
+
+.legal-document section:first-of-type {
+    border-top: 0;
+}
+
+.legal-document h2 {
+    margin: 0 0 10px;
+    font-size: 19px;
+}
+
+.legal-document p,
+.legal-document li {
+    color: var(--muted);
+    line-height: 1.8;
+}
+
+.legal-document p {
+    margin: 8px 0 0;
+}
+
+.legal-document ul {
+    margin: 10px 0 0;
+    padding-left: 20px;
+}
+
+.legal-document a {
+    color: var(--cyan);
+}
+
+.legal-document .legal-updated {
+    margin: 0 0 14px;
+    color: var(--gold);
+    font-size: 12px;
+    font-weight: 800;
 }
 
 .flash {

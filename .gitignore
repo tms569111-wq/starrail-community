@@ -5,8 +5,16 @@ out/
 *.iml
 .vscode/
 .env
+.env.*
+!.env.example
+!.env.production.example
 local-env.ps1
 application-local.yml
 src/main/resources/application-local.yml
 *.log
+*.pem
+*.key
+*.p12
+*.jks
+backups/
 private-uploads/

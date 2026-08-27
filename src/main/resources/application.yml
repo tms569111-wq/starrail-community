@@ -76,6 +76,8 @@ management:
       show-details: never
 
 app:
+  site:
+    contact-email: ${SITE_CONTACT_EMAIL:}
   operator:
     subject: ${APP_ADMIN_SUBJECT:}
     platinum-version: ${APP_PLATINUM_VERSION:4.5}
