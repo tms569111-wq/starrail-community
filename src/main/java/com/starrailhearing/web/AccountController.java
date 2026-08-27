@@ -1,7 +1,6 @@
 package com.starrailhearing.web;
 
 import com.starrailhearing.common.exception.AppException;
-import com.starrailhearing.config.AppProperties;
 import com.starrailhearing.member.service.BadgeService;
 import com.starrailhearing.member.service.CurrentMemberProvider;
 import com.starrailhearing.member.service.MemberService;
@@ -12,6 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -24,7 +24,6 @@ public class AccountController {
     private final CurrentMemberProvider currentMemberProvider;
     private final MemberService memberService;
     private final BadgeService badgeService;
-    private final AppProperties properties;
     private final TitleVerificationService titleVerificationService;
     private final AccountWithdrawalService withdrawalService;
 
@@ -32,14 +31,12 @@ public class AccountController {
             CurrentMemberProvider currentMemberProvider,
             MemberService memberService,
             BadgeService badgeService,
-            AppProperties properties,
             TitleVerificationService titleVerificationService,
             AccountWithdrawalService withdrawalService
     ) {
         this.currentMemberProvider = currentMemberProvider;
         this.memberService = memberService;
         this.badgeService = badgeService;
-        this.properties = properties;
         this.titleVerificationService = titleVerificationService;
         this.withdrawalService = withdrawalService;
     }
@@ -49,7 +46,7 @@ public class AccountController {
         long memberId = currentMemberProvider.requireCurrentMemberId();
         model.addAttribute("member", memberService.requireReadable(memberId));
         model.addAttribute("badges", badgeService.activeBadges(memberId));
-        model.addAttribute("currentVersion", properties.operator().platinumVersion());
+        model.addAttribute("titleVersions", titleVerificationService.applicationVersions());
         model.addAttribute("titleProfileVerified", titleVerificationService.hasVerifiedProfile(memberId));
         model.addAttribute("titleRequests", titleVerificationService.memberViews(memberId));
         return "account";
@@ -66,6 +63,22 @@ public class AccountController {
         return "redirect:/me/account";
     }
 
+    @PostMapping("/title-requests/{requestId}/cancel")
+    public String cancelTitleRequest(
+            @PathVariable long requestId,
+            RedirectAttributes redirect
+    ) {
+        try {
+            titleVerificationService.cancel(
+                    currentMemberProvider.requireCurrentMemberId(), requestId
+            );
+            redirect.addFlashAttribute("successMessage", "칭호 인증 신청을 취소했습니다. 새 이미지로 다시 신청할 수 있습니다.");
+        } catch (AppException | IllegalArgumentException exception) {
+            redirect.addFlashAttribute("errorMessage", exception.getMessage());
+        }
+        return "redirect:/me/account#title-verification";
+    }
+
     @PostMapping("/title-requests")
     public String requestTitle(
             @RequestParam String version,
@@ -80,7 +93,7 @@ public class AccountController {
         } catch (AppException | IllegalArgumentException exception) {
             redirect.addFlashAttribute("errorMessage", exception.getMessage());
         }
-        return "redirect:/me/account";
+        return "redirect:/me/account#title-verification";
     }
 
     @PostMapping("/withdraw")

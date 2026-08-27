@@ -40,7 +40,7 @@ public class GlobalExceptionHandler {
         return error(
                 ErrorCode.TITLE_IMAGE_INVALID.status().value(),
                 ErrorCode.TITLE_IMAGE_INVALID.name(),
-                "인증 이미지는 700KB 이하여야 합니다."
+                "인증 이미지는 2MB 이하여야 합니다."
         );
     }
 

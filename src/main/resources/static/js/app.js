@@ -5,9 +5,9 @@
 
     const commentsSection = document.querySelector('.character-page .comments-section');
     if (commentsSection) {
-        document.querySelectorAll('.character-page > .flash').forEach(flash => {
-            commentsSection.before(flash);
-        });
+        const heading = commentsSection.querySelector(':scope > .section-heading');
+        const flashes = [...document.querySelectorAll('.character-page > .flash')];
+        if (heading && flashes.length > 0) heading.after(...flashes);
     }
 
     document.querySelectorAll('[data-copy-target]').forEach(button => {
@@ -33,6 +33,14 @@
     document.querySelectorAll('[data-confirm-delete]').forEach(form => {
         form.addEventListener('submit', event => {
             if (!window.confirm('댓글을 삭제할까요?')) event.preventDefault();
+        });
+    });
+
+    document.querySelectorAll('[data-confirm-title-cancel]').forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!window.confirm('이 신청을 취소하고 증빙 이미지를 삭제할까요?')) {
+                event.preventDefault();
+            }
         });
     });
 
@@ -74,25 +82,27 @@
 
     document.querySelectorAll('[data-profile-cooldown]').forEach(panel => {
         const output = panel.querySelector('[data-profile-countdown]');
-        const seconds = Number.parseInt(panel.dataset.profileCooldown || '0', 10);
-        const deadline = Date.now() + Math.max(0, seconds) * 1000;
-        let timer;
+        const parsedSeconds = Number.parseInt(panel.dataset.profileCooldown || '0', 10);
+        const seconds = Number.isFinite(parsedSeconds) ? Math.max(0, parsedSeconds) : 0;
+        const deadline = Date.now() + seconds * 1000;
+        let timer = null;
 
         const update = () => {
             const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+            if (remaining <= 0) {
+                document.querySelectorAll('[data-profile-fetch-button]').forEach(button => {
+                    button.disabled = false;
+                });
+                if (timer !== null) window.clearInterval(timer);
+                panel.remove();
+                return;
+            }
             const minutes = String(Math.floor(remaining / 60)).padStart(2, '0');
             const rest = String(remaining % 60).padStart(2, '0');
             if (output) output.textContent = `${minutes}:${rest}`;
-            if (remaining > 0) return;
-
-            document.querySelectorAll('[data-profile-fetch-button]').forEach(button => {
-                button.disabled = false;
-            });
-            panel.hidden = true;
-            window.clearInterval(timer);
         };
 
         update();
-        timer = window.setInterval(update, 1000);
+        if (panel.isConnected) timer = window.setInterval(update, 1000);
     });
 })();

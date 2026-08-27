@@ -29,7 +29,7 @@ public enum ErrorCode {
     PROFILE_LOOKUP_FAILED(HttpStatus.NOT_FOUND, "UID를 조회하지 못했습니다. UID를 확인하고 잠시 후 다시 시도해 주세요."),
     PROFILE_NOT_PUBLIC(HttpStatus.UNPROCESSABLE_CONTENT, "UID는 확인했지만 전시 캐릭터를 불러오지 못했습니다. 게임에서 캐릭터 상세 정보 표시를 켜고 전시 캐릭터를 등록해 주세요."),
     CHARACTER_NOT_VERIFIED(HttpStatus.FORBIDDEN, "보유 인증된 캐릭터만 참여할 수 있습니다."),
-    PROFILE_SYNC_COOLDOWN(HttpStatus.TOO_MANY_REQUESTS, "너무 시도가 잦습니다. 3분 뒤 다시 시도해 주십시오!"),
+    PROFILE_SYNC_COOLDOWN(HttpStatus.TOO_MANY_REQUESTS, "새로고침 대기시간이 남아 있습니다."),
     PROFILE_REQUEST_THROTTLED(HttpStatus.TOO_MANY_REQUESTS, "현재 프로필 조회 요청이 많습니다. 잠시 후 다시 시도해 주세요."),
     PROFILE_UPSTREAM_THROTTLED(HttpStatus.SERVICE_UNAVAILABLE, "게임 프로필 서버 요청이 몰리고 있습니다. 잠시 후 다시 시도해 주세요."),
     UPSTREAM_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "게임 프로필 서버가 잠시 응답하지 않습니다."),
@@ -44,7 +44,7 @@ public enum ErrorCode {
     SELF_REPORT_NOT_ALLOWED(HttpStatus.CONFLICT, "자신의 댓글은 신고할 수 없습니다."),
     REPORT_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "오늘 신고 가능 횟수를 초과했습니다."),
     TITLE_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "칭호 인증 신청을 찾을 수 없습니다."),
-    TITLE_REQUEST_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 검토 대기 중인 칭호 신청이 있습니다."),
+    TITLE_REQUEST_ALREADY_EXISTS(HttpStatus.CONFLICT, "이 버전에 이미 검토 대기 중인 칭호 신청이 있습니다. 이미지를 바꾸려면 기존 신청을 취소해 주세요."),
     TITLE_IMAGE_INVALID(HttpStatus.UNPROCESSABLE_CONTENT, "인증 이미지는 JPG, PNG, WebP 한 장만 등록할 수 있습니다."),
     ACCOUNT_WITHDRAWAL_FAILED(HttpStatus.CONFLICT, "개인정보 파일을 정리하지 못해 탈퇴를 중단했습니다. 잠시 후 다시 시도해 주세요."),
     COMMENT_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "댓글을 너무 빠르게 작성하고 있습니다.");

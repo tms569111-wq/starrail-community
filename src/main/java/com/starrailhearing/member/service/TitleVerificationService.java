@@ -1,5 +1,7 @@
 package com.starrailhearing.member.service;
 
+import com.starrailhearing.common.exception.AppException;
+import com.starrailhearing.common.exception.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
@@ -25,13 +27,18 @@ public class TitleVerificationService {
     }
 
     public long submit(long memberId, String version, MultipartFile file) {
+        String validatedVersion = persistenceService.validateSubmissionBeforeUpload(memberId, version);
         TitleImageStorage.StoredTitleImage image = storage.store(file);
         try {
-            return persistenceService.create(memberId, version, image);
+            return persistenceService.create(memberId, validatedVersion, image);
         } catch (RuntimeException exception) {
             storage.delete(image.path());
             throw exception;
         }
+    }
+
+    public List<TitleRequestPersistenceService.TitleApplicationVersionView> applicationVersions() {
+        return persistenceService.applicationVersions();
     }
 
     public List<TitleRequestView> memberViews(long memberId) {
@@ -56,22 +63,33 @@ public class TitleVerificationService {
         deleteAndClear(persistenceService.decide(operatorId, requestId, approve, note));
     }
 
+    public void cancel(long memberId, long requestId) {
+        if (!deleteAndClear(persistenceService.cancel(memberId, requestId))) {
+            throw new AppException(
+                    ErrorCode.SERVICE_BUSY,
+                    "신청 취소는 접수됐지만 파일 정리가 진행 중입니다. 잠시 후 다시 확인해 주세요."
+            );
+        }
+    }
+
     @Scheduled(initialDelayString = "1m", fixedDelayString = "1h")
     public void expirePending() {
         persistenceService.expirePending().forEach(this::deleteAndClear);
         persistenceService.pendingEvidenceCleanup().forEach(this::deleteAndClear);
     }
 
-    private void deleteAndClear(TitleRequestPersistenceService.EvidenceCleanup cleanup) {
+    private boolean deleteAndClear(TitleRequestPersistenceService.EvidenceCleanup cleanup) {
         try {
             if (storage.delete(cleanup.path())) {
                 persistenceService.clearEvidence(cleanup.requestId(), cleanup.path());
+                return true;
             } else {
                 log.warn("Title evidence deletion will be retried requestId={}", cleanup.requestId());
             }
         } catch (RuntimeException exception) {
             log.error("Title evidence cleanup failed requestId={}", cleanup.requestId(), exception);
         }
+        return false;
     }
 
     public record ImageContent(Resource resource, String mimeType) {

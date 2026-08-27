@@ -36,8 +36,8 @@ spring:
     enabled: true
   servlet:
     multipart:
-      max-file-size: 700KB
-      max-request-size: 1MB
+      max-file-size: ${TITLE_MAXIMUM_BYTES:2097152}
+      max-request-size: ${TITLE_MAXIMUM_REQUEST_BYTES:3145728}
   http:
     clients:
       connect-timeout: 3s
@@ -78,7 +78,7 @@ management:
 app:
   operator:
     subject: ${APP_ADMIN_SUBJECT:}
-    platinum-version: ${APP_PLATINUM_VERSION:4.4}
+    platinum-version: ${APP_PLATINUM_VERSION:4.5}
     platinum-label: ${APP_PLATINUM_LABEL:이상중재 PLATINUM}
     platinum-color: ${APP_PLATINUM_COLOR:#8de9ff}
   account:
@@ -87,8 +87,8 @@ app:
     interval: ${TIER_AGGREGATION_INTERVAL:3m}
   title-verification:
     private-upload-dir: ${TITLE_PRIVATE_UPLOAD_DIR:./private-uploads/title-verification}
-    maximum-bytes: ${TITLE_MAXIMUM_BYTES:716800}
-    maximum-dimension: ${TITLE_MAXIMUM_DIMENSION:1600}
+    maximum-bytes: ${TITLE_MAXIMUM_BYTES:2097152}
+    maximum-dimension: ${TITLE_MAXIMUM_DIMENSION:3200}
     pending-ttl: ${TITLE_PENDING_TTL:30d}
   mihomo:
     base-url: ${MIHOMO_BASE_URL:https://api.mihomo.me}

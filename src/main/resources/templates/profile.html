@@ -25,8 +25,8 @@
 
     <div class="profile-cooldown" th:if="${profile.fetchCooldownSeconds > 0}"
          th:attr="data-profile-cooldown=${profile.fetchCooldownSeconds}">
-        <strong>너무 시도가 잦습니다.</strong>
-        <span><b data-profile-countdown>03:00</b> 뒤 다시 시도해 주십시오!</span>
+        <strong>새로고침 대기시간</strong>
+        <span><b data-profile-countdown>03:00</b> 뒤 다시 시도해 주세요.</span>
     </div>
 
     <section class="profile-panel" th:if="${!profile.exists}">
