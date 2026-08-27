@@ -2,6 +2,7 @@ package com.starrailhearing.member.service;
 
 import com.starrailhearing.common.exception.AppException;
 import com.starrailhearing.common.exception.ErrorCode;
+import com.starrailhearing.common.web.PagedView;
 import com.starrailhearing.config.AppProperties;
 import com.starrailhearing.member.domain.MemberAccount;
 import com.starrailhearing.member.domain.TitleRequestStatus;
@@ -9,10 +10,13 @@ import com.starrailhearing.member.domain.TitleVerificationRequest;
 import com.starrailhearing.member.repository.TitleVerificationRequestRepository;
 import com.starrailhearing.moderation.domain.ModerationActionType;
 import com.starrailhearing.moderation.service.AdminAuditService;
+import com.starrailhearing.notification.service.MemberNotificationService;
 import com.starrailhearing.profile.domain.ProfileVerificationStatus;
 import com.starrailhearing.profile.repository.GameProfileRepository;
 import com.starrailhearing.evaluation.repository.GameVersionRepository;
+import com.starrailhearing.evaluation.domain.VersionStatus;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +27,9 @@ import java.util.List;
 @Service
 @Transactional(readOnly = true)
 public class TitleRequestPersistenceService {
+    private static final int ADMIN_PAGE_SIZE = 20;
+    private static final int ADMIN_MAXIMUM_PAGES = 5;
+
     private final TitleVerificationRequestRepository repository;
     private final GameProfileRepository profileRepository;
     private final MemberService memberService;
@@ -31,6 +38,7 @@ public class TitleRequestPersistenceService {
     private final AppProperties properties;
     private final Clock clock;
     private final GameVersionRepository versionRepository;
+    private final MemberNotificationService notificationService;
 
     public TitleRequestPersistenceService(
             TitleVerificationRequestRepository repository,
@@ -40,7 +48,8 @@ public class TitleRequestPersistenceService {
             AdminAuditService auditService,
             AppProperties properties,
             Clock clock,
-            GameVersionRepository versionRepository
+            GameVersionRepository versionRepository,
+            MemberNotificationService notificationService
     ) {
         this.repository = repository;
         this.profileRepository = profileRepository;
@@ -50,6 +59,7 @@ public class TitleRequestPersistenceService {
         this.properties = properties;
         this.clock = clock;
         this.versionRepository = versionRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -59,15 +69,11 @@ public class TitleRequestPersistenceService {
                 memberId, ProfileVerificationStatus.VERIFIED
         )) throw new AppException(ErrorCode.PROFILE_VERIFICATION_REQUIRED);
         String normalizedVersion = normalizeVersion(version);
-        String applicationVersion = normalizeVersion(properties.operator().platinumVersion());
-        if (!applicationVersion.equals(normalizedVersion)) {
+        if (!eligibleVersions().contains(normalizedVersion)) {
             throw new AppException(
                     ErrorCode.INVALID_INPUT,
-                    "현재 칭호 인증을 신청할 수 있는 버전은 " + applicationVersion + "입니다."
+                    "Version 4.5 이후의 공개된 버전만 신청할 수 있습니다."
             );
-        }
-        if (versionRepository.findByVersionCode(normalizedVersion).isEmpty()) {
-            throw new AppException(ErrorCode.VERSION_NOT_FOUND);
         }
         if (repository.existsByMember_IdAndGameVersionAndStatus(
                 memberId, normalizedVersion, TitleRequestStatus.PENDING
@@ -100,9 +106,19 @@ public class TitleRequestPersistenceService {
         );
     }
 
-    public List<TitleRequestView> adminViews(long operatorId) {
+    public List<String> availableVersions(long memberId) {
+        memberService.requireReadable(memberId);
+        return eligibleVersions();
+    }
+
+    public PagedView<TitleRequestView> adminViews(long operatorId, int page) {
         memberService.requireAdmin(operatorId);
-        return repository.findTop100ByOrderByCreatedAtDesc().stream().map(this::toView).toList();
+        int safePage = Math.max(0, Math.min(page, ADMIN_MAXIMUM_PAGES - 1));
+        return PagedView.from(
+                repository.findAdminPage(PageRequest.of(safePage, ADMIN_PAGE_SIZE)),
+                this::toView,
+                ADMIN_MAXIMUM_PAGES
+        );
     }
 
     public ImageDescriptor requireImage(long operatorId, long requestId) {
@@ -115,6 +131,21 @@ public class TitleRequestPersistenceService {
             throw new AppException(ErrorCode.TITLE_REQUEST_NOT_FOUND);
         }
         return new ImageDescriptor(request.getPrivateImagePath(), request.getImageMimeType());
+    }
+
+    @Transactional
+    public EvidenceCleanup cancel(long memberId, long requestId) {
+        memberService.requireReadableForUpdate(memberId);
+        TitleVerificationRequest request = repository.findForUpdate(requestId)
+                .orElseThrow(() -> new AppException(ErrorCode.TITLE_REQUEST_NOT_FOUND));
+        try {
+            return new EvidenceCleanup(
+                    requestId,
+                    request.cancel(memberId, LocalDateTime.now(clock))
+            );
+        } catch (IllegalStateException exception) {
+            throw new AppException(ErrorCode.INVALID_INPUT, exception.getMessage());
+        }
     }
 
     @Transactional
@@ -137,11 +168,21 @@ public class TitleRequestPersistenceService {
                 auditService.record(operatorId, request.getMember().getId(), "TITLE_REQUEST", requestId,
                         ModerationActionType.APPROVE_TITLE, note,
                         "{\"status\":\"PENDING\"}", "{\"status\":\"APPROVED\"}");
+                notificationService.notify(
+                        request.getMember(),
+                        "이상중재 칭호 승인",
+                        "Version " + request.getGameVersion() + " 칭호 신청이 승인되었습니다. 검토 메모: " + note
+                );
             } else {
                 path = request.reject(operator, note, now);
                 auditService.record(operatorId, request.getMember().getId(), "TITLE_REQUEST", requestId,
                         ModerationActionType.REJECT_TITLE, note,
                         "{\"status\":\"PENDING\"}", "{\"status\":\"REJECTED\"}");
+                notificationService.notify(
+                        request.getMember(),
+                        "이상중재 칭호 신청 결과",
+                        "Version " + request.getGameVersion() + " 칭호 신청이 거절되었습니다. 거절 이유: " + note
+                );
             }
             return new EvidenceCleanup(requestId, path);
         } catch (IllegalStateException | IllegalArgumentException exception) {
@@ -192,6 +233,24 @@ public class TitleRequestPersistenceService {
             throw new AppException(ErrorCode.INVALID_INPUT, "게임 버전을 확인해 주세요.");
         }
         return normalized;
+    }
+
+    private List<String> eligibleVersions() {
+        return versionRepository.findAllByStatusInOrderByCreatedAtDesc(List.of(
+                        VersionStatus.OPEN,
+                        VersionStatus.CLOSING,
+                        VersionStatus.CLOSED
+                )).stream()
+                .map(version -> version.getVersionCode())
+                .filter(this::isAtLeastVersionFourPointFive)
+                .toList();
+    }
+
+    private boolean isAtLeastVersionFourPointFive(String version) {
+        String[] parts = version.split("\\.");
+        int major = Integer.parseInt(parts[0]);
+        int minor = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+        return major > 4 || (major == 4 && minor >= 5);
     }
 
     public record ImageDescriptor(String path, String mimeType) {

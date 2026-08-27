@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://raw.githubusercontent.com">
     <link rel="stylesheet" th:href="@{/css/app.css}">
     <link rel="stylesheet" th:href="@{/css/comment-ux.css}">
+    <script defer th:src="@{/js/app.js}"></script>
 </head>
 <body>
 <header class="site-header" th:fragment="header">
@@ -41,6 +42,27 @@
 </header>
 <footer class="site-footer" th:fragment="footer">
     <p>붕스청문회는 비공식 팬 프로젝트입니다. 투표 결과는 참여자 의견이며 공식 평가가 아닙니다.</p>
+    <dialog class="notification-dialog" th:if="${notifications != null and !notifications.isEmpty()}"
+            data-notification-dialog aria-labelledby="notification-dialog-title">
+        <div class="notification-dialog__heading">
+            <span class="eyebrow">OPERATION NOTICE</span>
+            <h2 id="notification-dialog-title">운영 처리 알림</h2>
+            <p>확인하지 않은 운영 처리 결과입니다.</p>
+        </div>
+        <div class="notification-dialog__list">
+            <article class="notification-card" th:each="notification : ${notifications}">
+                <strong th:text="${notification.title}">알림 제목</strong>
+                <p th:text="${notification.message}">알림 내용</p>
+                <time th:text="${notification.createdAt}">처리 일시</time>
+            </article>
+        </div>
+        <form method="post" th:action="@{/me/notifications/read}">
+            <input th:each="notification : ${notifications}" type="hidden"
+                   name="notificationIds" th:value="${notification.id}">
+            <input type="hidden" name="returnTo" th:value="${currentRequestPath}">
+            <button class="button button--primary button--full" type="submit">확인했습니다</button>
+        </form>
+    </dialog>
 </footer>
 </body>
 </html>

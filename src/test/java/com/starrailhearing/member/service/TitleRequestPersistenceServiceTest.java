@@ -7,6 +7,7 @@ import com.starrailhearing.evaluation.repository.GameVersionRepository;
 import com.starrailhearing.member.domain.MemberAccount;
 import com.starrailhearing.member.repository.TitleVerificationRequestRepository;
 import com.starrailhearing.moderation.service.AdminAuditService;
+import com.starrailhearing.notification.service.MemberNotificationService;
 import com.starrailhearing.profile.domain.ProfileVerificationStatus;
 import com.starrailhearing.profile.repository.GameProfileRepository;
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,8 @@ class TitleRequestPersistenceServiceTest {
                 mock(AdminAuditService.class),
                 properties("4.5"),
                 Clock.systemUTC(),
-                mock(GameVersionRepository.class)
+                mock(GameVersionRepository.class),
+                mock(MemberNotificationService.class)
         );
 
         assertThat(service.memberViews(7L)).isEmpty();
@@ -70,7 +72,8 @@ class TitleRequestPersistenceServiceTest {
                 mock(AdminAuditService.class),
                 properties("4.5"),
                 clock,
-                mock(GameVersionRepository.class)
+                mock(GameVersionRepository.class),
+                mock(MemberNotificationService.class)
         );
 
         assertThat(service.expirePending()).isEmpty();
@@ -109,7 +112,8 @@ class TitleRequestPersistenceServiceTest {
                 auditService,
                 properties,
                 Clock.systemUTC(),
-                versionRepository
+                versionRepository,
+                mock(MemberNotificationService.class)
         );
 
         assertThatThrownBy(() -> service.create(

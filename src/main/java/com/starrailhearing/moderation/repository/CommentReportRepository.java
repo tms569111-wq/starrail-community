@@ -3,6 +3,8 @@ package com.starrailhearing.moderation.repository;
 import com.starrailhearing.moderation.domain.CommentReport;
 import com.starrailhearing.moderation.domain.ReportStatus;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -26,7 +28,14 @@ public interface CommentReportRepository extends JpaRepository<CommentReport, Lo
     @EntityGraph(attributePaths = {
             "reporter", "comment", "comment.member", "comment.evaluation", "comment.evaluation.character", "resolvedBy"
     })
-    List<CommentReport> findTop100ByOrderByCreatedAtDesc();
+    @Query("""
+            select report from CommentReport report
+            order by case when report.status = com.starrailhearing.moderation.domain.ReportStatus.PENDING
+                     then 0 else 1 end,
+                     report.createdAt desc,
+                     report.id desc
+            """)
+    Page<CommentReport> findAdminPage(Pageable pageable);
 
     long countByStatus(ReportStatus status);
 

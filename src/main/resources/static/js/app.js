@@ -5,9 +5,18 @@
 
     const commentsSection = document.querySelector('.character-page .comments-section');
     if (commentsSection) {
-        document.querySelectorAll('.character-page > .flash').forEach(flash => {
-            commentsSection.before(flash);
-        });
+        const heading = commentsSection.querySelector(':scope > .section-heading');
+        const flashes = [...document.querySelectorAll('.character-page > .flash')];
+        if (heading && flashes.length > 0) heading.after(...flashes);
+    }
+
+    const notificationDialog = document.querySelector('[data-notification-dialog]');
+    if (notificationDialog && !notificationDialog.open) {
+        if (typeof notificationDialog.showModal === 'function') {
+            notificationDialog.showModal();
+        } else {
+            notificationDialog.setAttribute('open', '');
+        }
     }
 
     document.querySelectorAll('[data-copy-target]').forEach(button => {
@@ -76,7 +85,7 @@
         const output = panel.querySelector('[data-profile-countdown]');
         const seconds = Number.parseInt(panel.dataset.profileCooldown || '0', 10);
         const deadline = Date.now() + Math.max(0, seconds) * 1000;
-        let timer;
+        let timer = null;
 
         const update = () => {
             const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
@@ -88,11 +97,11 @@
             document.querySelectorAll('[data-profile-fetch-button]').forEach(button => {
                 button.disabled = false;
             });
-            panel.hidden = true;
-            window.clearInterval(timer);
+            panel.remove();
+            if (timer !== null) window.clearInterval(timer);
         };
 
         update();
-        timer = window.setInterval(update, 1000);
+        if (document.body.contains(panel)) timer = window.setInterval(update, 1000);
     });
 })();

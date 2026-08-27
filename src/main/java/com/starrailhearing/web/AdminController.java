@@ -60,15 +60,32 @@ public class AdminController {
     }
 
     @GetMapping
-    public String dashboard(Model model) {
+    public String dashboard(
+            @RequestParam(name = "section", defaultValue = "overview") String section,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            Model model
+    ) {
         long operatorId = currentMemberProvider.requireCurrentMemberId();
-        model.addAttribute("dashboard", dashboardService.view(operatorId));
-        model.addAttribute("versions", versionService.adminViews(operatorId));
-        model.addAttribute("characters", characterAdminService.views(operatorId));
-        model.addAttribute("titleRequests", titleVerificationService.adminViews(operatorId));
-        model.addAttribute("profileProviders", profileClient.providerStatuses());
+        String activeSection = normalizeSection(section);
+        model.addAttribute("summary", dashboardService.summary(operatorId));
+        model.addAttribute("activeSection", activeSection);
         model.addAttribute("profileProviderOptions", ProfileProvider.values());
         model.addAttribute("sanctionOptions", SuspensionPeriod.values());
+        switch (activeSection) {
+            case "versions" -> model.addAttribute("versions", versionService.adminViews(operatorId));
+            case "characters" -> model.addAttribute("characters", characterAdminService.views(operatorId));
+            case "reports" -> model.addAttribute("reportPage", dashboardService.reports(operatorId, page));
+            case "titles" -> model.addAttribute(
+                    "titleRequestPage", titleVerificationService.adminViews(operatorId, page)
+            );
+            case "members" -> model.addAttribute("memberPage", dashboardService.members(operatorId, page));
+            case "history" -> {
+                model.addAttribute("actionPage", dashboardService.actions(operatorId, page));
+                model.addAttribute("profileProviders", profileClient.providerStatuses());
+            }
+            default -> {
+            }
+        }
         return "admin";
     }
 
@@ -79,7 +96,7 @@ public class AdminController {
             @RequestParam String reason,
             RedirectAttributes redirect
     ) {
-        return run(redirect, "회원 제재를 기록했습니다.", () -> moderationService.sanctionMember(
+        return run(redirect, "members", "회원 제재를 기록했습니다.", () -> moderationService.sanctionMember(
                 currentMemberProvider.requireCurrentMemberId(), memberId,
                 SuspensionPeriod.from(period), reason
         ));
@@ -91,7 +108,7 @@ public class AdminController {
             @RequestParam String reason,
             RedirectAttributes redirect
     ) {
-        return run(redirect, "작성 권한을 복원했습니다.", () -> moderationService.restoreMember(
+        return run(redirect, "members", "작성 권한을 복원했습니다.", () -> moderationService.restoreMember(
                 currentMemberProvider.requireCurrentMemberId(), memberId, reason
         ));
     }
@@ -102,7 +119,7 @@ public class AdminController {
             @RequestParam String version,
             RedirectAttributes redirect
     ) {
-        return run(redirect, "칭호를 회수했습니다.", () -> {
+        return run(redirect, "members", "칭호를 회수했습니다.", () -> {
             long operatorId = currentMemberProvider.requireCurrentMemberId();
             badgeService.revoke(operatorId, memberId, version);
             moderationService.recordBadgeAction(
@@ -120,7 +137,7 @@ public class AdminController {
             @RequestParam String note,
             RedirectAttributes redirect
     ) {
-        return run(redirect, "신고를 처리했습니다.", () -> moderationService.decide(
+        return run(redirect, "reports", "신고를 처리했습니다.", () -> moderationService.decide(
                 currentMemberProvider.requireCurrentMemberId(), reportId,
                 ReportDecision.from(decision), hideComment,
                 sanction == null || sanction.isBlank() ? null : SuspensionPeriod.from(sanction), note
@@ -133,21 +150,21 @@ public class AdminController {
             @RequestParam String reason,
             RedirectAttributes redirect
     ) {
-        return run(redirect, "댓글을 복원했습니다.", () -> moderationService.restoreComment(
+        return run(redirect, "reports", "댓글을 복원했습니다.", () -> moderationService.restoreComment(
                 currentMemberProvider.requireCurrentMemberId(), commentId, reason
         ));
     }
 
     @PostMapping("/versions")
     public String createVersion(@RequestParam String versionCode, RedirectAttributes redirect) {
-        return run(redirect, "버전 초안을 만들었습니다.", () -> versionService.createDraft(
+        return run(redirect, "versions", "버전 초안을 만들었습니다.", () -> versionService.createDraft(
                 currentMemberProvider.requireCurrentMemberId(), versionCode
         ));
     }
 
     @PostMapping("/versions/{versionId}/open")
     public String openVersion(@PathVariable long versionId, RedirectAttributes redirect) {
-        return run(redirect, "버전을 열고 규칙 스냅샷을 확정했습니다.", () -> versionService.open(
+        return run(redirect, "versions", "버전을 열고 규칙 스냅샷을 확정했습니다.", () -> versionService.open(
                 currentMemberProvider.requireCurrentMemberId(), versionId
         ));
     }
@@ -158,7 +175,7 @@ public class AdminController {
             @RequestParam String confirmation,
             RedirectAttributes redirect
     ) {
-        return run(redirect, "최종 집계와 아카이브를 저장하고 버전을 종료했습니다.", () -> {
+        return run(redirect, "versions", "최종 집계와 아카이브를 저장하고 버전을 종료했습니다.", () -> {
             boolean closed = versionService.close(
                     currentMemberProvider.requireCurrentMemberId(), versionId, confirmation
             );
@@ -184,7 +201,7 @@ public class AdminController {
             @RequestParam int displayOrder,
             RedirectAttributes redirect
     ) {
-        return run(redirect, "캐릭터를 숨김 상태로 추가했습니다. 외부 ID를 확인한 뒤 공개해 주세요.", () -> characterAdminService.create(
+        return run(redirect, "characters", "캐릭터를 숨김 상태로 추가했습니다. 외부 ID를 확인한 뒤 공개해 주세요.", () -> characterAdminService.create(
                 currentMemberProvider.requireCurrentMemberId(), input(
                         canonicalExternalId, slug, name, rarity, pathCode, pathName,
                         elementCode, elementName, iconUrl, portraitUrl, displayOrder
@@ -208,7 +225,7 @@ public class AdminController {
             @RequestParam int displayOrder,
             RedirectAttributes redirect
     ) {
-        return run(redirect, "캐릭터 정보를 수정했습니다.", () -> characterAdminService.update(
+        return run(redirect, "characters", "캐릭터 정보를 수정했습니다.", () -> characterAdminService.update(
                 currentMemberProvider.requireCurrentMemberId(), characterId, input(
                         canonicalExternalId, slug, name, rarity, pathCode, pathName,
                         elementCode, elementName, iconUrl, portraitUrl, displayOrder
@@ -222,7 +239,7 @@ public class AdminController {
             @RequestParam boolean visible,
             RedirectAttributes redirect
     ) {
-        return run(redirect, visible ? "캐릭터를 공개했습니다." : "캐릭터를 숨겼습니다.",
+        return run(redirect, "characters", visible ? "캐릭터를 공개했습니다." : "캐릭터를 숨겼습니다.",
                 () -> characterAdminService.setVisible(
                         currentMemberProvider.requireCurrentMemberId(), characterId, visible
                 ));
@@ -235,7 +252,7 @@ public class AdminController {
             @RequestParam String externalId,
             RedirectAttributes redirect
     ) {
-        return run(redirect, "외부 ID 별칭을 저장했습니다.", () -> characterAdminService.upsertAlias(
+        return run(redirect, "characters", "외부 ID 별칭을 저장했습니다.", () -> characterAdminService.upsertAlias(
                 currentMemberProvider.requireCurrentMemberId(), characterId,
                 ProfileProvider.valueOf(provider.trim().toUpperCase()), externalId
         ));
@@ -248,7 +265,7 @@ public class AdminController {
             @RequestParam String note,
             RedirectAttributes redirect
     ) {
-        return run(redirect, "칭호 신청을 처리하고 증빙 파일 삭제 절차를 실행했습니다.",
+        return run(redirect, "titles", "칭호 신청을 처리하고 증빙 파일 삭제 절차를 실행했습니다.",
                 () -> titleVerificationService.decide(
                         currentMemberProvider.requireCurrentMemberId(), requestId, approve, note
                 ));
@@ -284,13 +301,26 @@ public class AdminController {
         );
     }
 
-    private String run(RedirectAttributes redirect, String success, Runnable action) {
+    private String run(
+            RedirectAttributes redirect,
+            String section,
+            String success,
+            Runnable action
+    ) {
         try {
             action.run();
             redirect.addFlashAttribute("successMessage", success);
         } catch (AppException | IllegalArgumentException exception) {
             redirect.addFlashAttribute("errorMessage", exception.getMessage());
         }
-        return "redirect:/admin";
+        return "redirect:/admin?section=" + section;
+    }
+
+    private String normalizeSection(String value) {
+        String normalized = value == null ? "" : value.trim().toLowerCase(java.util.Locale.ROOT);
+        return switch (normalized) {
+            case "versions", "characters", "reports", "titles", "members", "history" -> normalized;
+            default -> "overview";
+        };
     }
 }

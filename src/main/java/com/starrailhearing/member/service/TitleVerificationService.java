@@ -6,6 +6,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.starrailhearing.common.web.PagedView;
 
 import java.util.List;
 
@@ -42,8 +43,12 @@ public class TitleVerificationService {
         return persistenceService.hasVerifiedProfile(memberId);
     }
 
-    public List<TitleRequestView> adminViews(long operatorId) {
-        return persistenceService.adminViews(operatorId);
+    public List<String> availableVersions(long memberId) {
+        return persistenceService.availableVersions(memberId);
+    }
+
+    public PagedView<TitleRequestView> adminViews(long operatorId, int page) {
+        return persistenceService.adminViews(operatorId, page);
     }
 
     public ImageContent image(long operatorId, long requestId) {
@@ -54,6 +59,10 @@ public class TitleVerificationService {
 
     public void decide(long operatorId, long requestId, boolean approve, String note) {
         deleteAndClear(persistenceService.decide(operatorId, requestId, approve, note));
+    }
+
+    public void cancel(long memberId, long requestId) {
+        deleteAndClear(persistenceService.cancel(memberId, requestId));
     }
 
     @Scheduled(initialDelayString = "1m", fixedDelayString = "1h")

@@ -55,6 +55,8 @@ public record AdminDashboardView(
             long commentId,
             com.starrailhearing.comment.domain.CommentStatus commentStatus,
             String contentSnapshot,
+            String resolutionNote,
+            LocalDateTime resolvedAt,
             LocalDateTime createdAt
     ) {
     }

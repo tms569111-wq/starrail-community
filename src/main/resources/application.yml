@@ -36,8 +36,8 @@ spring:
     enabled: true
   servlet:
     multipart:
-      max-file-size: 700KB
-      max-request-size: 1MB
+      max-file-size: 2MB
+      max-request-size: 3MB
   http:
     clients:
       connect-timeout: 3s
@@ -87,8 +87,8 @@ app:
     interval: ${TIER_AGGREGATION_INTERVAL:3m}
   title-verification:
     private-upload-dir: ${TITLE_PRIVATE_UPLOAD_DIR:./private-uploads/title-verification}
-    maximum-bytes: ${TITLE_MAXIMUM_BYTES:716800}
-    maximum-dimension: ${TITLE_MAXIMUM_DIMENSION:1600}
+    maximum-bytes: ${TITLE_MAXIMUM_BYTES:2097152}
+    maximum-dimension: ${TITLE_MAXIMUM_DIMENSION:3200}
     pending-ttl: ${TITLE_PENDING_TTL:30d}
   mihomo:
     base-url: ${MIHOMO_BASE_URL:https://api.mihomo.me}

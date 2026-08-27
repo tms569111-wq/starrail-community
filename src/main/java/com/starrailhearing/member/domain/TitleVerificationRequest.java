@@ -78,6 +78,18 @@ public class TitleVerificationRequest extends BaseTimeEntity {
         return decide(operator, note, now, TitleRequestStatus.REJECTED);
     }
 
+    public String cancel(long memberId, LocalDateTime now) {
+        requirePending();
+        if (!member.getId().equals(memberId)) {
+            throw new IllegalStateException("본인의 칭호 신청만 취소할 수 있습니다.");
+        }
+        String path = privateImagePath;
+        status = TitleRequestStatus.CANCELED;
+        reviewNote = "신청자 취소";
+        reviewedAt = now;
+        return path;
+    }
+
     public String expire(LocalDateTime now) {
         requirePending();
         String path = privateImagePath;

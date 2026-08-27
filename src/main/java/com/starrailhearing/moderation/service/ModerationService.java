@@ -15,6 +15,7 @@ import com.starrailhearing.moderation.domain.ReportDecision;
 import com.starrailhearing.moderation.domain.ReportReason;
 import com.starrailhearing.moderation.repository.CommentReportRepository;
 import com.starrailhearing.moderation.repository.ModerationActionRepository;
+import com.starrailhearing.notification.service.MemberNotificationService;
 import com.starrailhearing.profile.domain.ProfileVerificationStatus;
 import com.starrailhearing.profile.repository.GameProfileRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -38,6 +39,7 @@ public class ModerationService {
     private final CharacterCommentRepository commentRepository;
     private final GameProfileRepository profileRepository;
     private final MemberService memberService;
+    private final MemberNotificationService notificationService;
     private final Clock clock;
 
     public ModerationService(
@@ -46,6 +48,7 @@ public class ModerationService {
             CharacterCommentRepository commentRepository,
             GameProfileRepository profileRepository,
             MemberService memberService,
+            MemberNotificationService notificationService,
             Clock clock
     ) {
         this.reportRepository = reportRepository;
@@ -53,6 +56,7 @@ public class ModerationService {
         this.commentRepository = commentRepository;
         this.profileRepository = profileRepository;
         this.memberService = memberService;
+        this.notificationService = notificationService;
         this.clock = clock;
     }
 
@@ -113,6 +117,7 @@ public class ModerationService {
                 record(operator, report.getComment().getMember(), "REPORT", reportId,
                         ModerationActionType.DISMISS_REPORT, note, reportState("PENDING"),
                         reportState("DISMISSED"));
+                notifyReporter(report, false, false, null, note);
                 return;
             }
 
@@ -130,6 +135,9 @@ public class ModerationService {
             record(operator, report.getComment().getMember(), "REPORT", reportId,
                     ModerationActionType.ACTION_REPORT, note, reportState("PENDING"),
                     reportState("ACTIONED"));
+            boolean commentDeleted = report.getComment().getStatus() == CommentStatus.HIDDEN_BY_MODERATOR;
+            notifyReporter(report, true, commentDeleted, sanction, note);
+            notifyAuthor(report, commentDeleted, sanction, note);
         } catch (IllegalStateException | IllegalArgumentException exception) {
             throw new AppException(ErrorCode.INVALID_INPUT, exception.getMessage());
         }
@@ -145,6 +153,11 @@ public class ModerationService {
         MemberAccount operator = memberService.requireAdmin(operatorId);
         MemberAccount target = memberService.require(targetId);
         sanctionMemberInternal(operator, target, period, reason);
+        notificationService.notify(
+                target,
+                "운영자 제재 안내",
+                "처리 이유: " + reason + " · 처벌: " + period.getLabel()
+        );
     }
 
     @Transactional
@@ -155,6 +168,11 @@ public class ModerationService {
         memberService.restoreByAdmin(operatorId, targetId);
         record(operator, target, "MEMBER", targetId, ModerationActionType.RESTORE_WRITE,
                 reason, before, memberState(target));
+        notificationService.notify(
+                target,
+                "작성 권한 복원 안내",
+                "작성 권한이 복원되었습니다. 복원 사유: " + reason
+        );
     }
 
     @Transactional
@@ -170,6 +188,11 @@ public class ModerationService {
         }
         record(operator, comment.getMember(), "COMMENT", commentId,
                 ModerationActionType.RESTORE_COMMENT, reason, before, commentState(comment));
+        notificationService.notify(
+                comment.getMember(),
+                comment.getEvaluation().getCharacter().getName() + " 댓글 복원 안내",
+                "운영자에 의해 숨겨졌던 " + commentType(comment) + "이 복원되었습니다. 복원 사유: " + reason
+        );
     }
 
     @Transactional
@@ -182,6 +205,9 @@ public class ModerationService {
         MemberAccount operator = memberService.requireAdmin(operatorId);
         MemberAccount target = memberService.require(targetId);
         record(operator, target, "MEMBER_BADGE", targetId, actionType, reason, "{}", "{}");
+        if (actionType == ModerationActionType.REVOKE_BADGE) {
+            notificationService.notify(target, "칭호 회수 안내", "회수 사유: " + reason);
+        }
     }
 
     private CharacterComment requireComment(long commentId, long expectedCharacterId) {
@@ -225,9 +251,55 @@ public class ModerationService {
             String beforeState,
             String afterState
     ) {
-        actionRepository.save(new ModerationAction(
+        actionRepository.saveAndFlush(new ModerationAction(
                 operator, target, targetType, targetId, type, reason, beforeState, afterState
         ));
+        actionRepository.deleteOutsideLatestOneHundred();
+    }
+
+    private void notifyReporter(
+            CommentReport report,
+            boolean actioned,
+            boolean commentDeleted,
+            SuspensionPeriod sanction,
+            String note
+    ) {
+        String character = report.getComment().getEvaluation().getCharacter().getName();
+        String type = commentType(report.getComment());
+        String result = actioned
+                ? "신고하신 " + character + "의 " + type + "가 처리되었습니다."
+                : "신고하신 " + character + "의 " + type + " 신고가 기각되었습니다.";
+        String detail = result + " 처리 이유: " + note;
+        if (actioned) detail += " · 처벌: " + penaltyLabel(commentDeleted, sanction);
+        notificationService.notify(report.getReporter(), "신고 처리 결과", detail);
+    }
+
+    private void notifyAuthor(
+            CommentReport report,
+            boolean commentDeleted,
+            SuspensionPeriod sanction,
+            String note
+    ) {
+        CharacterComment comment = report.getComment();
+        String character = comment.getEvaluation().getCharacter().getName();
+        String result = commentDeleted
+                ? character + "에 작성한 " + commentType(comment) + "이 삭제되었습니다. 삭제 이유: " + note
+                : character + "에 작성한 " + commentType(comment) + "이 신고 처리되었습니다. 처리 이유: " + note;
+        notificationService.notify(
+                comment.getMember(),
+                character + " " + commentType(comment) + " 처리 안내",
+                result + " · 처벌: " + penaltyLabel(commentDeleted, sanction)
+        );
+    }
+
+    private String penaltyLabel(boolean commentDeleted, SuspensionPeriod sanction) {
+        if (commentDeleted && sanction != null) return "댓글 삭제 · " + sanction.getLabel();
+        if (commentDeleted) return "댓글 삭제";
+        return sanction == null ? "별도 제재 없음" : sanction.getLabel();
+    }
+
+    private String commentType(CharacterComment comment) {
+        return comment.isRoot() ? "댓글" : "답글";
     }
 
     private String memberState(MemberAccount member) {

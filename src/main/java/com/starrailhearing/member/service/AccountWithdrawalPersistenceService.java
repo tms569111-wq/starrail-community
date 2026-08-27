@@ -9,6 +9,7 @@ import com.starrailhearing.member.repository.MemberBadgeRepository;
 import com.starrailhearing.member.repository.MemberNicknameHistoryRepository;
 import com.starrailhearing.member.repository.TitleVerificationRequestRepository;
 import com.starrailhearing.profile.repository.GameProfileRepository;
+import com.starrailhearing.notification.repository.MemberNotificationRepository;
 import com.starrailhearing.vote.repository.CharacterVoteRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ public class AccountWithdrawalPersistenceService {
     private final CharacterCommentRepository commentRepository;
     private final CommentLikeRepository likeRepository;
     private final TitleImageStorage imageStorage;
+    private final MemberNotificationRepository notificationRepository;
     private final Clock clock;
 
     public AccountWithdrawalPersistenceService(
@@ -39,6 +41,7 @@ public class AccountWithdrawalPersistenceService {
             CharacterCommentRepository commentRepository,
             CommentLikeRepository likeRepository,
             TitleImageStorage imageStorage,
+            MemberNotificationRepository notificationRepository,
             Clock clock
     ) {
         this.memberService = memberService;
@@ -50,6 +53,7 @@ public class AccountWithdrawalPersistenceService {
         this.commentRepository = commentRepository;
         this.likeRepository = likeRepository;
         this.imageStorage = imageStorage;
+        this.notificationRepository = notificationRepository;
         this.clock = clock;
     }
 
@@ -72,6 +76,7 @@ public class AccountWithdrawalPersistenceService {
         badgeRepository.deleteAllByMember_Id(memberId);
         nicknameHistoryRepository.deleteAllByMember_Id(memberId);
         profileRepository.deleteByMember_Id(memberId);
+        notificationRepository.deleteAllByMember_Id(memberId);
         member.withdraw(LocalDateTime.now(clock));
     }
 }

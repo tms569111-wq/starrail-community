@@ -43,7 +43,7 @@ public class TitleImageStorage {
     public StoredTitleImage store(MultipartFile file) {
         if (file == null || file.isEmpty() || file.getSize() > maximumBytes) {
             throw new AppException(ErrorCode.TITLE_IMAGE_INVALID,
-                    "이미지는 700KB 이하인 JPG, PNG 또는 WebP 파일이어야 합니다.");
+                    "이미지는 2MB 이하인 JPG, PNG 또는 WebP 파일이어야 합니다.");
         }
         try {
             Files.createDirectories(baseDirectory);
@@ -62,7 +62,7 @@ public class TitleImageStorage {
                     int height = reader.getHeight(0);
                     if (width < 1 || height < 1 || width > maximumDimension || height > maximumDimension) {
                         throw new AppException(ErrorCode.TITLE_IMAGE_INVALID,
-                                "이미지 가로·세로는 각각 1600px 이하여야 합니다.");
+                                "이미지 가로·세로는 각각 3200px 이하여야 합니다.");
                     }
                     BufferedImage source = reader.read(0);
                     return reencode(source);
@@ -119,7 +119,7 @@ public class TitleImageStorage {
             }
             if (Files.size(temporary) > maximumBytes) {
                 throw new AppException(ErrorCode.TITLE_IMAGE_INVALID,
-                        "안전하게 변환한 이미지가 700KB를 초과합니다.");
+                        "안전하게 변환한 이미지가 2MB를 초과합니다.");
             }
             try {
                 Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE);
