@@ -17,7 +17,8 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/", "/login", "/oauth2/**", "/login/oauth2/**",
+                                "/", "/login", "/privacy", "/terms", "/robots.txt",
+                                "/oauth2/**", "/login/oauth2/**",
                                 "/css/**", "/js/**", "/error",
                                 "/actuator/health", "/actuator/health/**"
                         ).permitAll()

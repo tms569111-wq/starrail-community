@@ -42,6 +42,10 @@
 </header>
 <footer class="site-footer" th:fragment="footer">
     <p>붕스청문회는 비공식 팬 프로젝트입니다. 투표 결과는 참여자 의견이며 공식 평가가 아닙니다.</p>
+    <nav class="site-footer__links" aria-label="서비스 안내">
+        <a th:href="@{/privacy}">개인정보처리방침</a>
+        <a th:href="@{/terms}">이용 안내</a>
+    </nav>
     <dialog class="notification-dialog" th:if="${notifications != null and !notifications.isEmpty()}"
             data-notification-dialog aria-labelledby="notification-dialog-title">
         <div class="notification-dialog__heading">

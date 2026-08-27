@@ -10,6 +10,7 @@ services:
       GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}"
       GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:?GOOGLE_CLIENT_SECRET is required}"
       APP_ADMIN_SUBJECT: "${APP_ADMIN_SUBJECT:?APP_ADMIN_SUBJECT is required}"
+      SITE_CONTACT_EMAIL: "${SITE_CONTACT_EMAIL:?SITE_CONTACT_EMAIL is required}"
       APP_PLATINUM_VERSION: "${APP_PLATINUM_VERSION:-4.5}"
       APP_PLATINUM_LABEL: "${APP_PLATINUM_LABEL:-이상중재 PLATINUM}"
       APP_PLATINUM_COLOR: "${APP_PLATINUM_COLOR:-#8DE9FF}"
@@ -44,5 +45,31 @@ services:
         max-size: "10m"
         max-file: "5"
 
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      SITE_DOMAIN: "${SITE_DOMAIN:?SITE_DOMAIN is required}"
+      TLS_CONTACT_EMAIL: "${TLS_CONTACT_EMAIL:?TLS_CONTACT_EMAIL is required}"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
 volumes:
   title-uploads:
+  caddy-data:
+  caddy-config:
