@@ -185,7 +185,7 @@ class ResilientGameProfileClientLoadTest {
                 new AppProperties.Operator("", "4.4", "PLATINUM", "#8DE9FF"),
                 new AppProperties.Account(Duration.ofDays(30)),
                 new AppProperties.Aggregation(Duration.ofMinutes(3)),
-                new AppProperties.TitleVerification("./build/test", 716800, 1600, Duration.ofDays(30)),
+                new AppProperties.TitleVerification("./build/test", 2097152, 3200, Duration.ofDays(30)),
                 new AppProperties.Mihomo(
                         URI.create("https://mihomo.invalid"),
                         "test",

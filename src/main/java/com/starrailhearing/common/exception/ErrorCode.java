@@ -44,7 +44,7 @@ public enum ErrorCode {
     SELF_REPORT_NOT_ALLOWED(HttpStatus.CONFLICT, "자신의 댓글은 신고할 수 없습니다."),
     REPORT_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "오늘 신고 가능 횟수를 초과했습니다."),
     TITLE_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "칭호 인증 신청을 찾을 수 없습니다."),
-    TITLE_REQUEST_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 검토 대기 중인 칭호 신청이 있습니다."),
+    TITLE_REQUEST_ALREADY_EXISTS(HttpStatus.CONFLICT, "이 버전에 이미 검토 대기 중인 칭호 신청이 있습니다. 이미지를 바꾸려면 기존 신청을 취소해 주세요."),
     TITLE_IMAGE_INVALID(HttpStatus.UNPROCESSABLE_CONTENT, "인증 이미지는 JPG, PNG, WebP 한 장만 등록할 수 있습니다."),
     ACCOUNT_WITHDRAWAL_FAILED(HttpStatus.CONFLICT, "개인정보 파일을 정리하지 못해 탈퇴를 중단했습니다. 잠시 후 다시 시도해 주세요."),
     COMMENT_RATE_LIMIT(HttpStatus.TOO_MANY_REQUESTS, "댓글을 너무 빠르게 작성하고 있습니다.");

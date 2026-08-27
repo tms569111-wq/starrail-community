@@ -3,8 +3,11 @@ package com.starrailhearing.member.service;
 import com.starrailhearing.common.exception.AppException;
 import com.starrailhearing.common.exception.ErrorCode;
 import com.starrailhearing.config.AppProperties;
+import com.starrailhearing.evaluation.domain.GameVersion;
+import com.starrailhearing.evaluation.domain.VersionStatus;
 import com.starrailhearing.evaluation.repository.GameVersionRepository;
 import com.starrailhearing.member.domain.MemberAccount;
+import com.starrailhearing.member.domain.TitleRequestStatus;
 import com.starrailhearing.member.repository.TitleVerificationRequestRepository;
 import com.starrailhearing.moderation.service.AdminAuditService;
 import com.starrailhearing.notification.service.MemberNotificationService;
@@ -17,6 +20,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -26,6 +30,58 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TitleRequestPersistenceServiceTest {
+
+    @Test
+    void 칭호_신청_버전은_공개된_4점5_이후_버전만_보여준다() {
+        GameVersionRepository versionRepository = mock(GameVersionRepository.class);
+        GameVersion version44 = openVersion("4.4");
+        GameVersion version45 = openVersion("4.5");
+        GameVersion version410 = openVersion("4.10");
+        when(versionRepository.findAllByStatusInOrderByCreatedAtDesc(List.of(
+                VersionStatus.OPEN,
+                VersionStatus.CLOSING,
+                VersionStatus.CLOSED
+        ))).thenReturn(List.of(version410, version45, version44));
+        TitleRequestPersistenceService service = service(
+                mock(TitleVerificationRequestRepository.class),
+                mock(GameProfileRepository.class),
+                mock(MemberService.class),
+                versionRepository
+        );
+
+        assertThat(service.applicationVersions())
+                .extracting(TitleRequestPersistenceService.TitleApplicationVersionView::versionCode)
+                .containsExactly("4.10", "4.5");
+    }
+
+    @Test
+    void 같은_버전의_신청_슬롯이_있으면_이미지_처리_전에_거절한다() {
+        TitleVerificationRequestRepository repository =
+                mock(TitleVerificationRequestRepository.class);
+        GameProfileRepository profileRepository = mock(GameProfileRepository.class);
+        MemberService memberService = mock(MemberService.class);
+        GameVersionRepository versionRepository = mock(GameVersionRepository.class);
+        when(memberService.requireActiveForWrite(7L)).thenReturn(mock(MemberAccount.class));
+        when(profileRepository.existsByMember_IdAndVerificationStatus(
+                7L, ProfileVerificationStatus.VERIFIED
+        )).thenReturn(true);
+        when(versionRepository.findByVersionCode("4.5")).thenReturn(Optional.of(openVersion("4.5")));
+        when(repository.existsByMember_IdAndGameVersionAndStatusIn(
+                7L,
+                "4.5",
+                List.of(TitleRequestStatus.PENDING, TitleRequestStatus.CANCELLED)
+        )).thenReturn(true);
+        TitleRequestPersistenceService service = service(
+                repository, profileRepository, memberService, versionRepository
+        );
+
+        assertThatThrownBy(() -> service.validateSubmissionBeforeUpload(7L, "4.5"))
+                .isInstanceOfSatisfying(AppException.class, exception ->
+                        assertThat(exception.getErrorCode())
+                                .isEqualTo(ErrorCode.TITLE_REQUEST_ALREADY_EXISTS));
+
+        verify(repository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
 
     @Test
     void 계정_화면의_칭호_신청_이력은_최근_20건만_조회한다() {
@@ -139,5 +195,30 @@ class TitleRequestPersistenceServiceTest {
                 null,
                 null
         );
+    }
+
+    private TitleRequestPersistenceService service(
+            TitleVerificationRequestRepository repository,
+            GameProfileRepository profileRepository,
+            MemberService memberService,
+            GameVersionRepository versionRepository
+    ) {
+        return new TitleRequestPersistenceService(
+                repository,
+                profileRepository,
+                memberService,
+                mock(BadgeService.class),
+                mock(AdminAuditService.class),
+                properties("4.5"),
+                Clock.systemUTC(),
+                versionRepository,
+                mock(MemberNotificationService.class)
+        );
+    }
+
+    private GameVersion openVersion(String versionCode) {
+        GameVersion version = new GameVersion(versionCode, 1, "{}");
+        version.open("{}", 1, LocalDateTime.of(2026, 8, 27, 0, 0));
+        return version;
     }
 }

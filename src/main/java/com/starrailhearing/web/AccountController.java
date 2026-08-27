@@ -11,9 +11,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -46,7 +46,7 @@ public class AccountController {
         long memberId = currentMemberProvider.requireCurrentMemberId();
         model.addAttribute("member", memberService.requireReadable(memberId));
         model.addAttribute("badges", badgeService.activeBadges(memberId));
-        model.addAttribute("titleVersions", titleVerificationService.availableVersions(memberId));
+        model.addAttribute("titleVersions", titleVerificationService.applicationVersions());
         model.addAttribute("titleProfileVerified", titleVerificationService.hasVerifiedProfile(memberId));
         model.addAttribute("titleRequests", titleVerificationService.memberViews(memberId));
         return "account";
@@ -63,6 +63,22 @@ public class AccountController {
         return "redirect:/me/account";
     }
 
+    @PostMapping("/title-requests/{requestId}/cancel")
+    public String cancelTitleRequest(
+            @PathVariable long requestId,
+            RedirectAttributes redirect
+    ) {
+        try {
+            titleVerificationService.cancel(
+                    currentMemberProvider.requireCurrentMemberId(), requestId
+            );
+            redirect.addFlashAttribute("successMessage", "칭호 인증 신청을 취소했습니다. 새 이미지로 다시 신청할 수 있습니다.");
+        } catch (AppException | IllegalArgumentException exception) {
+            redirect.addFlashAttribute("errorMessage", exception.getMessage());
+        }
+        return "redirect:/me/account#title-verification";
+    }
+
     @PostMapping("/title-requests")
     public String requestTitle(
             @RequestParam String version,
@@ -74,22 +90,6 @@ public class AccountController {
                     currentMemberProvider.requireCurrentMemberId(), version, image
             );
             redirect.addFlashAttribute("successMessage", "칭호 인증 신청을 접수했습니다.");
-        } catch (AppException | IllegalArgumentException exception) {
-            redirect.addFlashAttribute("errorMessage", exception.getMessage());
-        }
-        return "redirect:/me/account";
-    }
-
-    @PostMapping("/title-requests/{requestId}/cancel")
-    public String cancelTitleRequest(
-            @PathVariable long requestId,
-            RedirectAttributes redirect
-    ) {
-        try {
-            titleVerificationService.cancel(
-                    currentMemberProvider.requireCurrentMemberId(), requestId
-            );
-            redirect.addFlashAttribute("successMessage", "칭호 인증 신청을 취소했습니다. 같은 버전으로 다시 신청할 수 있습니다.");
         } catch (AppException | IllegalArgumentException exception) {
             redirect.addFlashAttribute("errorMessage", exception.getMessage());
         }

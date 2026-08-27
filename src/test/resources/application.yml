@@ -32,8 +32,8 @@ app:
     interval: 3m
   title-verification:
     private-upload-dir: ./build/test-private-uploads
-    maximum-bytes: 716800
-    maximum-dimension: 1600
+    maximum-bytes: 2097152
+    maximum-dimension: 3200
     pending-ttl: 30d
   mihomo:
     base-url: https://api.mihomo.me

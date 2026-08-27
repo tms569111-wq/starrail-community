@@ -25,7 +25,7 @@ class MySqlMigrationIntegrationTest {
             .withPassword("test");
 
     @Test
-    void 실제_MySQL에서_V3_레거시_데이터를_V13까지_안전하게_옮긴다() throws Exception {
+    void 실제_MySQL에서_V3_레거시_데이터를_V14까지_안전하게_옮긴다() throws Exception {
         migrateToV3();
         LegacyRows legacy = insertLegacyRows();
 
@@ -168,14 +168,14 @@ class MySqlMigrationIntegrationTest {
     private void verifyFlywayHistory() throws SQLException {
         assertThat(queryLong("""
                 SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1
-                """)).isEqualTo(13);
+                """)).isEqualTo(14);
         assertThat(queryLong("""
                 SELECT COUNT(*) FROM flyway_schema_history WHERE success = 0
                 """)).isZero();
         assertThat(queryString("""
                 SELECT version FROM flyway_schema_history
                 WHERE success = 1 ORDER BY installed_rank DESC LIMIT 1
-                """)).isEqualTo("13");
+                """)).isEqualTo("14");
         assertThat(queryLong("""
                 SELECT COUNT(DISTINCT index_name)
                 FROM information_schema.statistics

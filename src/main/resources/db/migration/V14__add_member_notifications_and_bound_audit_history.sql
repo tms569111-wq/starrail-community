@@ -1,9 +1,5 @@
--- Persistent moderation notifications, cancelable title requests, and bounded audit history.
-
-ALTER TABLE title_verification_request
-    DROP CHECK chk_title_request_status,
-    ADD CONSTRAINT chk_title_request_status
-        CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CANCELED', 'EXPIRED'));
+-- Persistent moderation notifications and bounded audit history.
+-- Title request cancellation is introduced by V13 on the updated master branch.
 
 CREATE TABLE member_notification
 (
