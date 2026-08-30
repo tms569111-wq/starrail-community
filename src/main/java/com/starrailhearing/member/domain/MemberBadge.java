@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "member_badge", uniqueConstraints = @UniqueConstraint(
-        name = "uq_member_badge_version", columnNames = {"member_id", "badge_type", "game_version"}
+        name = "uq_member_badge_version", columnNames = {"member_id", "game_version"}
 ))
 public class MemberBadge extends BaseTimeEntity {
 
@@ -69,20 +69,30 @@ public class MemberBadge extends BaseTimeEntity {
             LocalDateTime now
     ) {
         this.member = member;
-        this.badgeType = badgeType;
-        reactivate(gameVersion, label, colorHex, grantedBy, now);
+        grant(badgeType, gameVersion, label, colorHex, grantedBy, now);
     }
 
-    public void reactivate(
+    public void grant(
+            BadgeType requestedType,
             String gameVersion,
             String label,
             String colorHex,
             MemberAccount grantedBy,
             LocalDateTime now
     ) {
-        this.gameVersion = requireText(gameVersion, 20, "게임 버전");
-        this.label = requireText(label, 50, "배지 이름");
-        this.colorHex = validateColor(colorHex);
+        if (requestedType == null) {
+            throw new IllegalArgumentException("칭호 등급을 확인해 주세요.");
+        }
+        if (active && !requestedType.isHigherThan(badgeType)) {
+            throw new IllegalArgumentException("현재 칭호보다 높은 등급만 갱신할 수 있습니다.");
+        }
+        String normalizedVersion = requireText(gameVersion, 20, "게임 버전");
+        String normalizedLabel = requireText(label, 50, "배지 이름");
+        String normalizedColor = validateColor(colorHex);
+        this.badgeType = requestedType;
+        this.gameVersion = normalizedVersion;
+        this.label = normalizedLabel;
+        this.colorHex = normalizedColor;
         this.grantedBy = grantedBy;
         this.grantedAt = now;
         this.revokedAt = null;

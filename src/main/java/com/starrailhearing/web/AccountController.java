@@ -47,6 +47,7 @@ public class AccountController {
         model.addAttribute("member", memberService.requireReadable(memberId));
         model.addAttribute("badges", badgeService.activeBadges(memberId));
         model.addAttribute("titleVersions", titleVerificationService.applicationVersions());
+        model.addAttribute("titleTiers", titleVerificationService.applicationTiers());
         model.addAttribute("titleProfileVerified", titleVerificationService.hasVerifiedProfile(memberId));
         model.addAttribute("titleRequests", titleVerificationService.memberViews(memberId));
         return "account";
@@ -82,12 +83,13 @@ public class AccountController {
     @PostMapping("/title-requests")
     public String requestTitle(
             @RequestParam String version,
+            @RequestParam String tier,
             @RequestParam("image") MultipartFile image,
             RedirectAttributes redirect
     ) {
         try {
             titleVerificationService.submit(
-                    currentMemberProvider.requireCurrentMemberId(), version, image
+                    currentMemberProvider.requireCurrentMemberId(), version, tier, image
             );
             redirect.addFlashAttribute("successMessage", "칭호 인증 신청을 접수했습니다.");
         } catch (AppException | IllegalArgumentException exception) {

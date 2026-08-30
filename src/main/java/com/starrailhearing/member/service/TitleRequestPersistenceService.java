@@ -7,6 +7,7 @@ import com.starrailhearing.config.AppProperties;
 import com.starrailhearing.evaluation.domain.GameVersion;
 import com.starrailhearing.evaluation.domain.VersionStatus;
 import com.starrailhearing.evaluation.repository.GameVersionRepository;
+import com.starrailhearing.member.domain.BadgeType;
 import com.starrailhearing.member.domain.MemberAccount;
 import com.starrailhearing.member.domain.TitleRequestStatus;
 import com.starrailhearing.member.domain.TitleVerificationRequest;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigInteger;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -31,6 +33,7 @@ import java.util.List;
 public class TitleRequestPersistenceService {
     private static final int ADMIN_PAGE_SIZE = 20;
     private static final int ADMIN_MAXIMUM_PAGES = 5;
+    private static final int MAXIMUM_APPLICATION_VERSIONS = 10;
     private static final String MINIMUM_APPLICATION_VERSION = "4.5";
     private static final List<VersionStatus> APPLICATION_STATUSES = List.of(
             VersionStatus.OPEN,
@@ -75,14 +78,20 @@ public class TitleRequestPersistenceService {
     }
 
     @Transactional
-    public long create(long memberId, String version, TitleImageStorage.StoredTitleImage image) {
-        ValidatedSubmission submission = validateSubmissionForMember(memberId, version);
+    public long create(
+            long memberId,
+            String version,
+            BadgeType badgeType,
+            TitleImageStorage.StoredTitleImage image
+    ) {
+        ValidatedSubmission submission = validateSubmissionForMember(memberId, version, badgeType);
         MemberAccount member = submission.member();
         String normalizedVersion = submission.version();
         try {
             TitleVerificationRequest request = repository.save(new TitleVerificationRequest(
                     member,
                     normalizedVersion,
+                    submission.badgeType(),
                     image.path(),
                     image.mimeType(),
                     LocalDateTime.now(clock).plus(properties.titleVerification().pendingTtl())
@@ -95,8 +104,12 @@ public class TitleRequestPersistenceService {
     }
 
     @Transactional
-    public String validateSubmissionBeforeUpload(long memberId, String version) {
-        return validateSubmissionForMember(memberId, version).version();
+    public ValidatedSubmission validateSubmissionBeforeUpload(
+            long memberId,
+            String version,
+            String tier
+    ) {
+        return validateSubmissionForMember(memberId, version, BadgeType.from(tier));
     }
 
     public List<TitleApplicationVersionView> applicationVersions() {
@@ -106,10 +119,21 @@ public class TitleRequestPersistenceService {
                         version.getVersionCode(),
                         versionStatusLabel(version.getStatus())
                 ))
+                .limit(MAXIMUM_APPLICATION_VERSIONS)
                 .toList();
     }
 
-    private ValidatedSubmission validateSubmissionForMember(long memberId, String version) {
+    public List<TitleApplicationTierView> applicationTiers() {
+        return Arrays.stream(BadgeType.values())
+                .map(type -> new TitleApplicationTierView(type.name(), type.label()))
+                .toList();
+    }
+
+    private ValidatedSubmission validateSubmissionForMember(
+            long memberId,
+            String version,
+            BadgeType badgeType
+    ) {
         MemberAccount member = memberService.requireActiveForWrite(memberId);
         if (!profileRepository.existsByMember_IdAndVerificationStatus(
                 memberId, ProfileVerificationStatus.VERIFIED
@@ -127,7 +151,15 @@ public class TitleRequestPersistenceService {
         if (repository.existsByMember_IdAndGameVersionAndStatusIn(
                 memberId, gameVersion.getVersionCode(), SLOT_HOLDING_STATUSES
         )) throw new AppException(ErrorCode.TITLE_REQUEST_ALREADY_EXISTS);
-        return new ValidatedSubmission(member, gameVersion.getVersionCode());
+        BadgeView currentBadge = badgeService.find(memberId, gameVersion.getVersionCode());
+        if (currentBadge != null && !badgeType.isHigherThan(currentBadge.tier())) {
+            throw new AppException(
+                    ErrorCode.INVALID_INPUT,
+                    "Version " + gameVersion.getVersionCode() + "에는 이미 "
+                            + currentBadge.label() + " 칭호가 있습니다. 더 높은 등급만 신청할 수 있습니다."
+            );
+        }
+        return new ValidatedSubmission(member, gameVersion.getVersionCode(), badgeType);
     }
 
     public List<TitleRequestView> memberViews(long memberId) {
@@ -179,16 +211,17 @@ public class TitleRequestPersistenceService {
                         operatorId,
                         request.getMember().getId(),
                         request.getGameVersion(),
-                        properties.operator().platinumLabel(),
-                        properties.operator().platinumColor()
+                        request.getBadgeType()
                 );
                 auditService.record(operatorId, request.getMember().getId(), "TITLE_REQUEST", requestId,
                         ModerationActionType.APPROVE_TITLE, note,
-                        "{\"status\":\"PENDING\"}", "{\"status\":\"APPROVED\"}");
+                        "{\"status\":\"PENDING\",\"tier\":\"" + request.getBadgeType() + "\"}",
+                        "{\"status\":\"APPROVED\",\"tier\":\"" + request.getBadgeType() + "\"}");
                 notificationService.notify(
                         request.getMember(),
                         "이상중재 칭호 승인",
-                        "Version " + request.getGameVersion() + " 칭호 신청이 승인되었습니다. 검토 메모: " + note
+                        "Version " + request.getGameVersion() + " " + request.getBadgeType().label()
+                                + " 신청이 승인되었습니다. 검토 메모: " + note
                 );
             } else {
                 path = request.reject(operator, note, now);
@@ -257,7 +290,8 @@ public class TitleRequestPersistenceService {
     private TitleRequestView toView(TitleVerificationRequest request) {
         return new TitleRequestView(
                 request.getId(), request.getMember().getId(), request.getMember().getNickname(),
-                request.getGameVersion(), request.getStatus(), request.getReviewNote(),
+                request.getGameVersion(), request.getBadgeType().label(),
+                request.getStatus(), request.getReviewNote(),
                 request.getExpiresAt(), request.getReviewedAt(), request.getCreatedAt(),
                 request.getStatus() == TitleRequestStatus.PENDING
                         && request.getPrivateImagePath() != null
@@ -299,10 +333,13 @@ public class TitleRequestPersistenceService {
         };
     }
 
-    private record ValidatedSubmission(MemberAccount member, String version) {
+    public record ValidatedSubmission(MemberAccount member, String version, BadgeType badgeType) {
     }
 
     public record TitleApplicationVersionView(String versionCode, String statusLabel) {
+    }
+
+    public record TitleApplicationTierView(String code, String label) {
     }
 
     public record ImageDescriptor(String path, String mimeType) {
