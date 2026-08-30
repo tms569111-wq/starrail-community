@@ -23,14 +23,14 @@
             <th:block th:if="${currentUser != null}">
                 <a th:if="${currentUser.admin}" th:href="@{/admin}">운영</a>
                 <a class="button button--secondary button--small uid-nav-link" th:href="@{/me/profile}">UID 인증</a>
-                <a th:href="@{/me/account#title-verification}">칭호 신청</a>
+                <a th:href="@{/me/account#title-verification}">이상중재 칭호신청</a>
                 <a class="status-chip" th:if="${!currentUser.nicknameConfigured}" th:href="@{/me/account}">닉네임 설정 필요</a>
                 <a class="status-chip status-chip--blocked" th:if="${currentUser.nicknameConfigured and !currentUser.canWrite}" th:href="@{/me/account}">차단됨</a>
                 <a class="profile-link" th:href="@{/me/account}">
                     <span th:text="${currentUser.nickname}">사용자</span>
-                    <span class="platinum-badge" th:if="${currentUser.badge != null}"
+                    <span class="title-badge" th:if="${currentUser.badge != null}"
                           th:style="|--badge-color:${currentUser.badge.colorHex}|"
-                          th:text="${currentUser.badge.label}">PLATINUM</span>
+                          th:text="${currentUser.badge.label}">이상중재 칭호</span>
                 </a>
                 <form class="header-logout" method="post" th:action="@{/logout}">
                     <button type="submit">로그아웃</button>

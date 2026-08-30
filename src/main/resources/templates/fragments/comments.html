@@ -7,9 +7,9 @@
             <div>
                 <span class="verified-badge" th:text="|E${reply.eidolon}|">E0</span>
                 <strong th:text="${reply.nickname}">작성자</strong>
-                <span class="platinum-badge" th:if="${reply.badge != null}"
+                <span class="title-badge" th:if="${reply.badge != null}"
                       th:style="|--badge-color:${reply.badge.colorHex}|"
-                      th:text="|${reply.badge.label} · v${reply.badge.version}|">PLATINUM</span>
+                      th:text="|${reply.badge.label} · v${reply.badge.version}|">이상중재 칭호</span>
                 <span class="mine-badge" th:if="${reply.mine}">내 답글</span>
             </div>
             <time th:text="${reply.createdAt}">작성일</time>
