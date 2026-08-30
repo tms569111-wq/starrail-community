@@ -25,7 +25,7 @@ class MySqlMigrationIntegrationTest {
             .withPassword("test");
 
     @Test
-    void 실제_MySQL에서_V3_레거시_데이터를_V14까지_안전하게_옮긴다() throws Exception {
+    void 실제_MySQL에서_V3_레거시_데이터를_최신_스키마까지_안전하게_옮긴다() throws Exception {
         migrateToV3();
         LegacyRows legacy = insertLegacyRows();
 
@@ -36,6 +36,7 @@ class MySqlMigrationIntegrationTest {
         assertThat(columnExists("member_account", "profile_fetch_available_at")).isTrue();
         verifyVersionMigration();
         verifyCommentsReportsAndModeration(legacy);
+        verifyBadgeTierConstraints(legacy.memberA());
         verifyTitleRequestConstraints();
     }
 
@@ -158,6 +159,13 @@ class MySqlMigrationIntegrationTest {
                 INSERT INTO member_block (blocker_member_id, blocked_member_id, created_at)
                 VALUES (?, ?, NOW(6))
                 """, memberA, memberB);
+        update("""
+                INSERT INTO member_badge
+                (member_id, badge_type, game_version, label, color_hex, active,
+                 granted_by_member_id, granted_at, created_at, updated_at)
+                VALUES (?, 'PLATINUM', '4.4', '이상중재 PLATINUM', '#8DE9FF', TRUE,
+                        NULL, NOW(6), NOW(6), NOW(6))
+                """, memberA);
 
         return new LegacyRows(
                 memberA, memberB, namespaceMember, profileId,
@@ -268,6 +276,37 @@ class MySqlMigrationIntegrationTest {
                 """, legacy.commentId())).isNull();
     }
 
+    private void verifyBadgeTierConstraints(long memberId) throws SQLException {
+        assertThat(queryString("""
+                SELECT label FROM member_badge
+                WHERE member_id = ? AND game_version = '4.4'
+                """, memberId)).isEqualTo("이상중재 플래티넘");
+        assertThat(queryString("""
+                SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index SEPARATOR ',')
+                FROM information_schema.statistics
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'member_badge'
+                  AND index_name = 'uq_member_badge_version'
+                """)).isEqualTo("member_id,game_version");
+
+        update("""
+                UPDATE member_badge
+                SET badge_type = 'GOLD', label = '이상중재 골드', color_hex = '#FFD166'
+                WHERE member_id = ? AND game_version = '4.4'
+                """, memberId);
+        assertThat(queryString("""
+                SELECT badge_type FROM member_badge
+                WHERE member_id = ? AND game_version = '4.4'
+                """, memberId)).isEqualTo("GOLD");
+        assertThatThrownBy(() -> update("""
+                INSERT INTO member_badge
+                (member_id, badge_type, game_version, label, color_hex, active,
+                 granted_by_member_id, granted_at, created_at, updated_at)
+                VALUES (?, 'PLATINUM', '4.4', '중복', '#8DE9FF', TRUE,
+                        NULL, NOW(6), NOW(6), NOW(6))
+                """, memberId)).isInstanceOf(SQLException.class);
+    }
+
     private void verifyTitleRequestConstraints() throws SQLException {
         update("""
                 INSERT INTO member_account
@@ -290,12 +329,19 @@ class MySqlMigrationIntegrationTest {
                 WHERE member_id = ? AND game_version = '4.4'
                 """, memberId)).isEqualTo(3);
         assertThat(queryString("""
+                SELECT badge_type FROM title_verification_request
+                WHERE member_id = ? AND game_version = '4.4'
+                ORDER BY id LIMIT 1
+                """, memberId)).isEqualTo("PLATINUM");
+        assertThat(queryString("""
                 SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index SEPARATOR ',')
                 FROM information_schema.statistics
                 WHERE table_schema = DATABASE()
                   AND table_name = 'title_verification_request'
                   AND index_name = 'uq_title_request_pending'
                 """)).isEqualTo("member_id,game_version,pending_marker");
+
+        assertThat(columnExists("title_verification_request", "badge_type")).isTrue();
 
         update("DELETE FROM member_account WHERE id = ?", memberId);
         assertThat(queryLong("""
