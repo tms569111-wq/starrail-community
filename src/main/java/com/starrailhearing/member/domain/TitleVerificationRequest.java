@@ -29,6 +29,10 @@ public class TitleVerificationRequest extends BaseTimeEntity {
     @Column(name = "game_version", nullable = false, length = 20)
     private String gameVersion;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "badge_type", nullable = false, length = 30)
+    private BadgeType badgeType;
+
     @Column(name = "private_image_path", length = 500)
     private String privateImagePath;
 
@@ -58,12 +62,15 @@ public class TitleVerificationRequest extends BaseTimeEntity {
     public TitleVerificationRequest(
             MemberAccount member,
             String gameVersion,
+            BadgeType badgeType,
             String privateImagePath,
             String imageMimeType,
             LocalDateTime expiresAt
     ) {
         this.member = member;
         this.gameVersion = requireText(gameVersion, 20, "게임 버전");
+        if (badgeType == null) throw new IllegalArgumentException("칭호 등급을 확인해 주세요.");
+        this.badgeType = badgeType;
         this.privateImagePath = requireText(privateImagePath, 500, "이미지 경로");
         this.imageMimeType = requireText(imageMimeType, 50, "이미지 형식");
         this.status = TitleRequestStatus.PENDING;
@@ -136,6 +143,7 @@ public class TitleVerificationRequest extends BaseTimeEntity {
     public Long getId() { return id; }
     public MemberAccount getMember() { return member; }
     public String getGameVersion() { return gameVersion; }
+    public BadgeType getBadgeType() { return badgeType; }
     public String getPrivateImagePath() { return privateImagePath; }
     public String getImageMimeType() { return imageMimeType; }
     public TitleRequestStatus getStatus() { return status; }
