@@ -6,6 +6,7 @@ import com.starrailhearing.config.AppProperties;
 import com.starrailhearing.evaluation.domain.GameVersion;
 import com.starrailhearing.evaluation.domain.VersionStatus;
 import com.starrailhearing.evaluation.repository.GameVersionRepository;
+import com.starrailhearing.member.domain.BadgeType;
 import com.starrailhearing.member.domain.MemberAccount;
 import com.starrailhearing.member.domain.TitleRequestStatus;
 import com.starrailhearing.member.repository.TitleVerificationRequestRepository;
@@ -30,6 +31,25 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TitleRequestPersistenceServiceTest {
+
+    @Test
+    void 신청할_수_있는_이상중재_칭호_네_등급을_제공한다() {
+        TitleRequestPersistenceService service = service(
+                mock(TitleVerificationRequestRepository.class),
+                mock(GameProfileRepository.class),
+                mock(MemberService.class),
+                mock(GameVersionRepository.class)
+        );
+
+        assertThat(service.applicationTiers())
+                .extracting(TitleRequestPersistenceService.TitleApplicationTierView::label)
+                .containsExactly(
+                        "이상중재 브론즈",
+                        "이상중재 실버",
+                        "이상중재 골드",
+                        "이상중재 플래티넘"
+                );
+    }
 
     @Test
     void 칭호_신청_버전은_공개된_4점5_이후_버전만_보여준다() {
@@ -75,12 +95,48 @@ class TitleRequestPersistenceServiceTest {
                 repository, profileRepository, memberService, versionRepository
         );
 
-        assertThatThrownBy(() -> service.validateSubmissionBeforeUpload(7L, "4.5"))
+        assertThatThrownBy(() -> service.validateSubmissionBeforeUpload(7L, "4.5", "BRONZE"))
                 .isInstanceOfSatisfying(AppException.class, exception ->
                         assertThat(exception.getErrorCode())
                                 .isEqualTo(ErrorCode.TITLE_REQUEST_ALREADY_EXISTS));
 
         verify(repository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void 이미_보유한_칭호보다_높은_등급만_다시_신청할_수_있다() {
+        TitleVerificationRequestRepository repository =
+                mock(TitleVerificationRequestRepository.class);
+        GameProfileRepository profileRepository = mock(GameProfileRepository.class);
+        MemberService memberService = mock(MemberService.class);
+        BadgeService badgeService = mock(BadgeService.class);
+        GameVersionRepository versionRepository = mock(GameVersionRepository.class);
+        MemberAccount member = mock(MemberAccount.class);
+        when(memberService.requireActiveForWrite(7L)).thenReturn(member);
+        when(profileRepository.existsByMember_IdAndVerificationStatus(
+                7L, ProfileVerificationStatus.VERIFIED
+        )).thenReturn(true);
+        when(versionRepository.findByVersionCode("4.5")).thenReturn(Optional.of(openVersion("4.5")));
+        when(badgeService.find(7L, "4.5")).thenReturn(new BadgeView(
+                "4.5", BadgeType.GOLD, BadgeType.GOLD.label(), BadgeType.GOLD.colorHex()
+        ));
+        TitleRequestPersistenceService service = new TitleRequestPersistenceService(
+                repository,
+                profileRepository,
+                memberService,
+                badgeService,
+                mock(AdminAuditService.class),
+                properties("4.5"),
+                Clock.systemUTC(),
+                versionRepository,
+                mock(MemberNotificationService.class)
+        );
+
+        assertThatThrownBy(() -> service.validateSubmissionBeforeUpload(7L, "4.5", "SILVER"))
+                .isInstanceOfSatisfying(AppException.class, exception ->
+                        assertThat(exception.getMessage()).contains("더 높은 등급"));
+        assertThat(service.validateSubmissionBeforeUpload(7L, "4.5", "PLATINUM").badgeType())
+                .isEqualTo(BadgeType.PLATINUM);
     }
 
     @Test
@@ -175,6 +231,7 @@ class TitleRequestPersistenceServiceTest {
         assertThatThrownBy(() -> service.create(
                 7L,
                 "4.4",
+                BadgeType.BRONZE,
                 new TitleImageStorage.StoredTitleImage("evidence.jpg", "image/jpeg")
         )).isInstanceOfSatisfying(AppException.class, exception -> {
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
