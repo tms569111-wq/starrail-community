@@ -9,6 +9,7 @@ public record TitleRequestView(
         long memberId,
         String memberNickname,
         String gameVersion,
+        String badgeLabel,
         TitleRequestStatus status,
         String reviewNote,
         LocalDateTime expiresAt,

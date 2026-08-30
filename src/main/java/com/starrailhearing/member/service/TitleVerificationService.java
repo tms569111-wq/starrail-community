@@ -27,11 +27,13 @@ public class TitleVerificationService {
         this.persistenceService = persistenceService;
     }
 
-    public long submit(long memberId, String version, MultipartFile file) {
-        String validatedVersion = persistenceService.validateSubmissionBeforeUpload(memberId, version);
+    public long submit(long memberId, String version, String tier, MultipartFile file) {
+        var submission = persistenceService.validateSubmissionBeforeUpload(memberId, version, tier);
         TitleImageStorage.StoredTitleImage image = storage.store(file);
         try {
-            return persistenceService.create(memberId, validatedVersion, image);
+            return persistenceService.create(
+                    memberId, submission.version(), submission.badgeType(), image
+            );
         } catch (RuntimeException exception) {
             storage.delete(image.path());
             throw exception;
@@ -40,6 +42,10 @@ public class TitleVerificationService {
 
     public List<TitleRequestPersistenceService.TitleApplicationVersionView> applicationVersions() {
         return persistenceService.applicationVersions();
+    }
+
+    public List<TitleRequestPersistenceService.TitleApplicationTierView> applicationTiers() {
+        return persistenceService.applicationTiers();
     }
 
     public List<TitleRequestView> memberViews(long memberId) {

@@ -7,9 +7,12 @@ import com.starrailhearing.member.repository.MemberBadgeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigInteger;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -17,6 +20,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class BadgeService {
+    private static final int MAXIMUM_BADGES_PER_MEMBER = 10;
+
     private final MemberBadgeRepository repository;
     private final MemberService memberService;
     private final Clock clock;
@@ -32,38 +37,49 @@ public class BadgeService {
             long operatorId,
             long memberId,
             String version,
-            String label,
-            String colorHex
+            BadgeType badgeType
     ) {
         String normalizedVersion = normalizeVersion(version);
+        if (badgeType == null) throw new IllegalArgumentException("칭호 등급을 확인해 주세요.");
         MemberAccount operator = memberService.requireAdmin(operatorId);
         MemberAccount member = memberService.require(memberId);
         LocalDateTime now = LocalDateTime.now(clock);
         MemberBadge badge = repository
-                .findByMember_IdAndBadgeTypeAndGameVersion(memberId, BadgeType.PLATINUM, normalizedVersion)
+                .findByMember_IdAndGameVersion(memberId, normalizedVersion)
                 .map(existing -> {
-                    existing.reactivate(normalizedVersion, label, colorHex, operator, now);
+                    existing.grant(
+                            badgeType,
+                            normalizedVersion,
+                            badgeType.label(),
+                            badgeType.colorHex(),
+                            operator,
+                            now
+                    );
                     return existing;
                 })
                 .orElseGet(() -> new MemberBadge(
-                        member, BadgeType.PLATINUM, normalizedVersion, label, colorHex, operator, now
+                        member,
+                        badgeType,
+                        normalizedVersion,
+                        badgeType.label(),
+                        badgeType.colorHex(),
+                        operator,
+                        now
                 ));
         repository.save(badge);
+        repository.flush();
+        trimBadgeHistory(memberId);
     }
 
     @Transactional
     public void revoke(long operatorId, long memberId, String version) {
         memberService.requireAdmin(operatorId);
-        repository.findByMember_IdAndBadgeTypeAndGameVersion(
-                        memberId, BadgeType.PLATINUM, normalizeVersion(version)
-                )
+        repository.findByMember_IdAndGameVersion(memberId, normalizeVersion(version))
                 .ifPresent(badge -> badge.revoke(LocalDateTime.now(clock)));
     }
 
     public BadgeView find(long memberId, String version) {
-        return repository.findByMember_IdAndBadgeTypeAndGameVersion(
-                        memberId, BadgeType.PLATINUM, normalizeVersion(version)
-                )
+        return repository.findByMember_IdAndGameVersion(memberId, normalizeVersion(version))
                 .filter(MemberBadge::isActive)
                 .map(this::toView)
                 .orElse(null);
@@ -72,9 +88,7 @@ public class BadgeService {
     public Map<Long, BadgeView> findForMembers(Collection<Long> memberIds, String version) {
         if (memberIds.isEmpty()) return Map.of();
         return repository
-                .findByMember_IdInAndBadgeTypeAndGameVersionAndActiveTrue(
-                        memberIds, BadgeType.PLATINUM, normalizeVersion(version)
-                )
+                .findByMember_IdInAndGameVersionAndActiveTrue(memberIds, normalizeVersion(version))
                 .stream()
                 .collect(Collectors.toMap(
                         badge -> badge.getMember().getId(),
@@ -84,32 +98,61 @@ public class BadgeService {
     }
 
     public List<BadgeView> activeBadges(long memberId) {
-        return repository.findByMember_IdAndActiveTrueOrderByGameVersionDesc(memberId)
-                .stream().map(this::toView).toList();
+        return sortedActiveBadges(repository.findAllByMember_Id(memberId)).stream()
+                .limit(MAXIMUM_BADGES_PER_MEMBER)
+                .map(this::toView)
+                .toList();
     }
 
     public BadgeView findLatestActive(long memberId) {
-        return repository.findByMember_IdAndActiveTrueOrderByGameVersionDesc(memberId)
-                .stream()
-                .max((left, right) -> compareVersions(left.getGameVersion(), right.getGameVersion()))
+        return sortedActiveBadges(repository.findAllByMember_Id(memberId)).stream()
+                .findFirst()
                 .map(this::toView)
                 .orElse(null);
     }
 
     public Map<Long, BadgeView> findLatestForMembers(Collection<Long> memberIds) {
         if (memberIds.isEmpty()) return Map.of();
-        return repository.findByMember_IdInAndBadgeTypeAndActiveTrue(memberIds, BadgeType.PLATINUM)
+        return repository.findByMember_IdInAndActiveTrue(memberIds)
                 .stream()
                 .collect(Collectors.toMap(
                         badge -> badge.getMember().getId(),
                         this::toView,
-                        (left, right) -> compareVersions(left.version(), right.version()) >= 0
-                                ? left : right
+                        this::latest
                 ));
     }
 
     private BadgeView toView(MemberBadge badge) {
-        return new BadgeView(badge.getGameVersion(), badge.getLabel(), badge.getColorHex());
+        return new BadgeView(
+                badge.getGameVersion(), badge.getBadgeType(), badge.getLabel(), badge.getColorHex()
+        );
+    }
+
+    private BadgeView latest(BadgeView left, BadgeView right) {
+        int versionComparison = compareVersions(left.version(), right.version());
+        if (versionComparison != 0) return versionComparison > 0 ? left : right;
+        return left.tier().isHigherThan(right.tier()) ? left : right;
+    }
+
+    private List<MemberBadge> sortedActiveBadges(List<MemberBadge> badges) {
+        return badges.stream()
+                .filter(MemberBadge::isActive)
+                .sorted(Comparator.comparing(
+                        MemberBadge::getGameVersion,
+                        this::compareVersions
+                ).reversed())
+                .toList();
+    }
+
+    private void trimBadgeHistory(long memberId) {
+        List<MemberBadge> badges = new ArrayList<>(repository.findAllByMember_Id(memberId));
+        badges.sort(Comparator.comparing(
+                MemberBadge::getGameVersion,
+                this::compareVersions
+        ).reversed());
+        if (badges.size() > MAXIMUM_BADGES_PER_MEMBER) {
+            repository.deleteAll(badges.subList(MAXIMUM_BADGES_PER_MEMBER, badges.size()));
+        }
     }
 
     private String normalizeVersion(String version) {
@@ -125,9 +168,11 @@ public class BadgeService {
         String[] rightParts = right.split("\\.");
         int length = Math.max(leftParts.length, rightParts.length);
         for (int index = 0; index < length; index++) {
-            int leftValue = index < leftParts.length ? Integer.parseInt(leftParts[index]) : 0;
-            int rightValue = index < rightParts.length ? Integer.parseInt(rightParts[index]) : 0;
-            int compared = Integer.compare(leftValue, rightValue);
+            BigInteger leftValue = index < leftParts.length
+                    ? new BigInteger(leftParts[index]) : BigInteger.ZERO;
+            BigInteger rightValue = index < rightParts.length
+                    ? new BigInteger(rightParts[index]) : BigInteger.ZERO;
+            int compared = leftValue.compareTo(rightValue);
             if (compared != 0) return compared;
         }
         return 0;
