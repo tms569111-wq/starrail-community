@@ -142,9 +142,9 @@
             <div class="comment-composer__author">
                 <span class="verified-badge" th:text="|E${commentPage.verifiedEidolon} 인증|">E0 인증</span>
                 <strong th:text="${currentUser.nickname}">사용자</strong>
-                <span class="platinum-badge" th:if="${currentUser.badge != null}"
+                <span class="title-badge" th:if="${currentUser.badge != null}"
                       th:style="|--badge-color:${currentUser.badge.colorHex}|"
-                      th:text="${currentUser.badge.label}">PLATINUM</span>
+                      th:text="${currentUser.badge.label}">이상중재 칭호</span>
             </div>
             <textarea name="content" maxlength="1000" rows="4"
                       placeholder="실제로 사용하며 느낀 장점, 단점, 필요한 조합을 적어 주세요." required></textarea>
@@ -169,9 +169,9 @@
                     <div>
                         <span class="verified-badge" th:text="|E${comment.eidolon}|">E0</span>
                         <strong th:text="${comment.nickname}">작성자</strong>
-                        <span class="platinum-badge" th:if="${comment.badge != null}"
+                        <span class="title-badge" th:if="${comment.badge != null}"
                               th:style="|--badge-color:${comment.badge.colorHex}|"
-                              th:text="|${comment.badge.label} · v${comment.badge.version}|">PLATINUM</span>
+                              th:text="|${comment.badge.label} · v${comment.badge.version}|">이상중재 칭호</span>
                     </div>
                     <span th:text="|추천 ${comment.likeCount}|">추천 0</span>
                 </div>
@@ -194,9 +194,9 @@
                     <div>
                         <span class="verified-badge" th:text="|E${comment.eidolon}|">E0</span>
                         <strong th:text="${comment.nickname}">작성자</strong>
-                        <span class="platinum-badge" th:if="${comment.badge != null}"
+                        <span class="title-badge" th:if="${comment.badge != null}"
                               th:style="|--badge-color:${comment.badge.colorHex}|"
-                              th:text="|${comment.badge.label} · v${comment.badge.version}|">PLATINUM</span>
+                              th:text="|${comment.badge.label} · v${comment.badge.version}|">이상중재 칭호</span>
                         <span class="mine-badge" th:if="${comment.mine}">내 댓글</span>
                     </div>
                     <time th:text="${comment.createdAt}">작성일</time>

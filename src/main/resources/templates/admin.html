@@ -142,7 +142,7 @@
     <section class="admin-section" id="titles" th:if="${activeSection == 'titles'}">
         <div class="section-heading section-heading--compact"><div><span class="eyebrow">PRIVATE EVIDENCE</span><h2>칭호 인증</h2></div></div>
         <div class="admin-card" th:each="request : ${titleRequestPage.items}">
-            <div class="admin-card__heading"><strong th:text="|${request.memberNickname} · Version ${request.gameVersion}|">신청</strong><span class="status-chip" th:text="${request.status.label}">검토 대기</span></div>
+            <div class="admin-card__heading"><strong th:text="|${request.memberNickname} · Version ${request.gameVersion} · ${request.badgeLabel}|">신청</strong><span class="status-chip" th:text="${request.status.label}">검토 대기</span></div>
             <a th:if="${request.imageAvailable}" target="_blank" rel="noopener" th:href="@{/admin/title-requests/{id}/image(id=${request.id})}">비공개 증빙 열기</a>
             <p th:if="${request.reviewNote != null}" th:text="${request.reviewNote}">검토 메모</p>
             <form class="admin-action-form" th:if="${request.status.name() == 'PENDING'}" method="post" th:action="@{/admin/title-requests/{id}(id=${request.id})}">
@@ -166,7 +166,7 @@
                 <span th:if="${member.status.name() != 'SUSPENDED'}" th:text="|#${member.id} · ${member.role} · ${member.status}|">상태</span>
                 <span class="blocked-status" th:if="${member.status.name() == 'SUSPENDED'}" th:text="|#${member.id} · ${member.role} · 차단됨|">차단됨</span>
                 <span th:if="${member.suspensionReason != null}" th:text="|${member.suspensionReason} · ${member.suspendedUntil ?: '영구'}|">제재</span>
-                <span class="platinum-badge" th:if="${member.badge != null}" th:style="|--badge-color:${member.badge.colorHex}|" th:text="${member.badge.label}">PLATINUM</span>
+                <span class="title-badge" th:if="${member.badge != null}" th:style="|--badge-color:${member.badge.colorHex}|" th:text="${member.badge.label}">이상중재 칭호</span>
             </div>
             <div class="admin-member__forms" th:if="${member.role.name() != 'ADMIN' and member.status.name() != 'DELETED'}">
                 <form class="admin-action-form" method="post" th:action="@{/admin/members/{id}/sanctions(id=${member.id})}">
