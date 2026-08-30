@@ -19,11 +19,11 @@
             <span>붕스청문회</span>
         </a>
         <nav class="site-nav" aria-label="주 메뉴">
-            <a th:href="@{/}">캐릭터</a>
+            <a class="nav-link--compact-hide" th:href="@{/}">캐릭터</a>
             <th:block th:if="${currentUser != null}">
                 <a th:if="${currentUser.admin}" th:href="@{/admin}">운영</a>
                 <a class="button button--secondary button--small uid-nav-link" th:href="@{/me/profile}">UID 인증</a>
-                <a th:href="@{/me/account#title-verification}">이상중재 칭호신청</a>
+                <a class="nav-link--compact-hide" th:href="@{/me/account#title-verification}">이상중재 칭호신청</a>
                 <a class="status-chip" th:if="${!currentUser.nicknameConfigured}" th:href="@{/me/account}">닉네임 설정 필요</a>
                 <a class="status-chip status-chip--blocked" th:if="${currentUser.nicknameConfigured and !currentUser.canWrite}" th:href="@{/me/account}">차단됨</a>
                 <a class="profile-link" th:href="@{/me/account}">
