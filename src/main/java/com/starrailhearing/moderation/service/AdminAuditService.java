@@ -34,6 +34,6 @@ public class AdminAuditService {
         repository.saveAndFlush(new ModerationAction(
                 operator, target, targetType, targetId, type, reason, beforeState, afterState
         ));
-        repository.deleteOutsideLatestOneHundred();
+        repository.deleteOutsideRetentionWindow();
     }
 }
