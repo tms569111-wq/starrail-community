@@ -32,6 +32,18 @@ class CommentReportTest {
     }
 
     @Test
+    void 댓글_최대_길이_3000자도_신고_스냅샷으로_보존한다() {
+        MemberAccount reporter = MemberAccount.google("reporter", "reporter@example.com", "신고자");
+        CharacterComment comment = mock(CharacterComment.class);
+        String content = "가".repeat(3000);
+        when(comment.getContent()).thenReturn(content);
+
+        CommentReport report = new CommentReport(reporter, comment, ReportReason.OTHER, null);
+
+        assertThat(report.getContentSnapshot()).hasSize(3000).isEqualTo(content);
+    }
+
+    @Test
     void 이미_처리된_신고는_다시_처리할_수_없다() {
         MemberAccount reporter = MemberAccount.google("reporter", "reporter@example.com", "신고자");
         MemberAccount operator = MemberAccount.google("operator", "operator@example.com", "별빛 개척자");
