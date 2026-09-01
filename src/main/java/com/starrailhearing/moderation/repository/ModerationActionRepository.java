@@ -21,9 +21,9 @@ public interface ModerationActionRepository extends JpaRepository<ModerationActi
                     SELECT id
                     FROM moderation_action
                     ORDER BY created_at DESC, id DESC
-                    LIMIT 100
+                    LIMIT 10000
                 ) retained
             )
             """, nativeQuery = true)
-    int deleteOutsideLatestOneHundred();
+    int deleteOutsideRetentionWindow();
 }
