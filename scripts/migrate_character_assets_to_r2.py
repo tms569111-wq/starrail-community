@@ -153,10 +153,10 @@ def download(session: requests.Session, url: str) -> bytes:
 def to_webp(source: bytes, max_dimension: int) -> bytes:
     try:
         with Image.open(io.BytesIO(source)) as image:
-            image.load()
             width, height = image.size
             if width <= 0 or height <= 0 or width * height > MAX_SOURCE_PIXELS:
                 raise RuntimeError(f"unsafe decoded dimensions: {width}x{height}")
+            image.load()
 
             if max(width, height) > max_dimension:
                 ratio = max_dimension / max(width, height)
