@@ -38,7 +38,7 @@ public class ResilientGameProfileClient implements GameProfileClient {
     private final Semaphore admissionSlots;
     private final Semaphore concurrentSlots;
     private final Map<String, CacheEntry> cache = new LinkedHashMap<>(16, 0.75f, true);
-    private final Map<String, CompletableFuture<PublicGameProfile>> inFlight = new ConcurrentHashMap<>();
+    private final Map<RequestKey, CompletableFuture<PublicGameProfile>> inFlight = new ConcurrentHashMap<>();
     private final Map<ProfileProvider, CircuitState> circuits = new EnumMap<>(ProfileProvider.class);
 
     public ResilientGameProfileClient(
@@ -84,10 +84,11 @@ public class ResilientGameProfileClient implements GameProfileClient {
             return cached.profile();
         }
 
+        RequestKey requestKey = new RequestKey(uid, forceUpdate);
         CompletableFuture<PublicGameProfile> owned = new CompletableFuture<>();
-        CompletableFuture<PublicGameProfile> existing = inFlight.putIfAbsent(uid, owned);
+        CompletableFuture<PublicGameProfile> existing = inFlight.putIfAbsent(requestKey, owned);
         if (existing != null) {
-            log.info("PROFILE joined in-flight UID request uid={}", maskedUid);
+            log.info("PROFILE joined in-flight UID request uid={} forceUpdate={}", maskedUid, forceUpdate);
             return awaitInFlight(existing, maskedUid);
         }
 
@@ -113,7 +114,7 @@ public class ResilientGameProfileClient implements GameProfileClient {
         } finally {
             if (concurrentAcquired) concurrentSlots.release();
             if (admissionAcquired) admissionSlots.release();
-            inFlight.remove(uid, owned);
+            inFlight.remove(requestKey, owned);
         }
     }
 
@@ -280,6 +281,9 @@ public class ResilientGameProfileClient implements GameProfileClient {
     private String maskUid(String uid) {
         if (uid == null || uid.length() < 4) return "****";
         return "*****" + uid.substring(uid.length() - 4);
+    }
+
+    private record RequestKey(String uid, boolean forceUpdate) {
     }
 
     private record CacheEntry(PublicGameProfile profile, Instant expiresAt) {
