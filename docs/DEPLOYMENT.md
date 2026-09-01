@@ -47,6 +47,8 @@ chmod 600 .env
 - `APP_ADMIN_SUBJECT`: 운영자 Google 계정의 고정 `sub` 값
 - `MIHOMO_USER_AGENT`, `ENKA_USER_AGENT`: 실제 연락처가 포함된 User-Agent
 
+이상중재 칭호의 브론즈·실버·골드·플래티넘 이름/색상은 `BadgeType`에서 관리하고, 신청 가능한 버전은 `game_version` 데이터에서 조회합니다. 신규 게임 버전이 열릴 때 `APP_PLATINUM_*` 같은 환경변수를 추가하거나 수정하지 않습니다.
+
 ## 4. 첫 실행
 
 ```bash

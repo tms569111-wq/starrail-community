@@ -182,7 +182,7 @@ class ResilientGameProfileClientLoadTest {
 
     private AppProperties properties(int maxConcurrentRequests, int maxWaitingRequests) {
         return new AppProperties(
-                new AppProperties.Operator("", "4.4", "PLATINUM", "#8DE9FF"),
+                new AppProperties.Operator(""),
                 new AppProperties.Account(Duration.ofDays(30)),
                 new AppProperties.Aggregation(Duration.ofMinutes(3)),
                 new AppProperties.TitleVerification("./build/test", 2097152, 3200, Duration.ofDays(30)),

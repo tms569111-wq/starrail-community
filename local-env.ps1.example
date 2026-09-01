@@ -9,9 +9,8 @@ $env:GOOGLE_CLIENT_ID = "your-google-client-id.apps.googleusercontent.com"
 $env:GOOGLE_CLIENT_SECRET = "your-google-client-secret"
 $env:APP_ADMIN_SUBJECT = "your-stable-google-sub"
 
-$env:APP_PLATINUM_VERSION = "4.4"
-$env:APP_PLATINUM_LABEL = "이상중재 PLATINUM"
-$env:APP_PLATINUM_COLOR = "#8DE9FF"
+# 칭호 등급/색상과 신청 가능 버전은 코드와 game_version 데이터에서 관리합니다.
+# 신규 게임 버전마다 이 파일을 수정할 필요가 없습니다.
 
 # 본인 GitHub 저장소나 이메일처럼 연락 가능한 값을 넣는 것을 권장합니다.
 $env:MIHOMO_USER_AGENT = "StarrailHearing/0.1 contact=your-contact"

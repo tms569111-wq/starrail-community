@@ -30,7 +30,7 @@ class BadgeServiceTest {
         MemberBadgeRepository repository = mock(MemberBadgeRepository.class);
         MemberService memberService = mock(MemberService.class);
         MemberAccount member = MemberAccount.google("user", "user@example.com", "유저");
-        MemberAccount operator = MemberAccount.google("admin", "admin@example.com", "운영자");
+        MemberAccount operator = MemberAccount.google("admin", "admin@example.com", "검토담당");
         MemberBadge existing = badge(member, BadgeType.BRONZE, "4.5");
         when(memberService.requireAdmin(1L)).thenReturn(operator);
         when(memberService.require(7L)).thenReturn(member);
