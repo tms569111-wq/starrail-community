@@ -80,9 +80,6 @@ app:
     contact-email: ${SITE_CONTACT_EMAIL:}
   operator:
     subject: ${APP_ADMIN_SUBJECT:}
-    platinum-version: ${APP_PLATINUM_VERSION:4.5}
-    platinum-label: ${APP_PLATINUM_LABEL:이상중재 PLATINUM}
-    platinum-color: ${APP_PLATINUM_COLOR:#8de9ff}
   account:
     nickname-cooldown: ${NICKNAME_CHANGE_COOLDOWN:30d}
   aggregation:

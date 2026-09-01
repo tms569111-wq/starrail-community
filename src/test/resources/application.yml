@@ -23,9 +23,6 @@ app:
     enabled: false
   operator:
     subject: web-smoke-operator
-    platinum-version: "4.4"
-    platinum-label: Test Platinum
-    platinum-color: "#8DE9FF"
   account:
     nickname-cooldown: 30d
   aggregation:

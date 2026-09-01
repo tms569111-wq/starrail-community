@@ -15,12 +15,7 @@ public record AppProperties(
         Enka enka,
         ProfileClient profileClient
 ) {
-    public record Operator(
-            String subject,
-            String platinumVersion,
-            String platinumLabel,
-            String platinumColor
-    ) {
+    public record Operator(String subject) {
     }
 
     public record Account(Duration nicknameCooldown) {

@@ -176,14 +176,14 @@ class MySqlMigrationIntegrationTest {
     private void verifyFlywayHistory() throws SQLException {
         assertThat(queryLong("""
                 SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1
-                """)).isEqualTo(14);
+                """)).isEqualTo(16);
         assertThat(queryLong("""
                 SELECT COUNT(*) FROM flyway_schema_history WHERE success = 0
                 """)).isZero();
         assertThat(queryString("""
                 SELECT version FROM flyway_schema_history
                 WHERE success = 1 ORDER BY installed_rank DESC LIMIT 1
-                """)).isEqualTo("14");
+                """)).isEqualTo("16");
         assertThat(queryLong("""
                 SELECT COUNT(DISTINCT index_name)
                 FROM information_schema.statistics
@@ -318,11 +318,11 @@ class MySqlMigrationIntegrationTest {
         long memberId = queryLong("""
                 SELECT id FROM member_account WHERE provider_user_id = 'title-constraint-member'
                 """);
-        insertTitleRequest(memberId, "APPROVED");
-        insertTitleRequest(memberId, "REJECTED");
-        insertTitleRequest(memberId, "PENDING");
+        insertTitleRequest(memberId, "APPROVED", "BRONZE");
+        insertTitleRequest(memberId, "REJECTED", "SILVER");
+        insertTitleRequest(memberId, "PENDING", "GOLD");
 
-        assertThatThrownBy(() -> insertTitleRequest(memberId, "PENDING"))
+        assertThatThrownBy(() -> insertTitleRequest(memberId, "PENDING", "PLATINUM"))
                 .isInstanceOf(SQLException.class);
         assertThat(queryLong("""
                 SELECT COUNT(*) FROM title_verification_request
@@ -332,7 +332,7 @@ class MySqlMigrationIntegrationTest {
                 SELECT badge_type FROM title_verification_request
                 WHERE member_id = ? AND game_version = '4.4'
                 ORDER BY id LIMIT 1
-                """, memberId)).isEqualTo("PLATINUM");
+                """, memberId)).isEqualTo("BRONZE");
         assertThat(queryString("""
                 SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index SEPARATOR ',')
                 FROM information_schema.statistics
@@ -342,6 +342,18 @@ class MySqlMigrationIntegrationTest {
                 """)).isEqualTo("member_id,game_version,pending_marker");
 
         assertThat(columnExists("title_verification_request", "badge_type")).isTrue();
+        assertThat(queryString("""
+                SELECT IF(column_default IS NULL, 'NONE', column_default)
+                FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'title_verification_request'
+                  AND column_name = 'badge_type'
+                """)).isEqualTo("NONE");
+        assertThatThrownBy(() -> update("""
+                INSERT INTO title_verification_request
+                (member_id, game_version, status, expires_at, created_at, updated_at)
+                VALUES (?, '4.4', 'APPROVED', NOW(6) + INTERVAL 30 DAY, NOW(6), NOW(6))
+                """, memberId)).isInstanceOf(SQLException.class);
 
         update("DELETE FROM member_account WHERE id = ?", memberId);
         assertThat(queryLong("""
@@ -349,12 +361,12 @@ class MySqlMigrationIntegrationTest {
                 """, memberId)).isZero();
     }
 
-    private void insertTitleRequest(long memberId, String status) throws SQLException {
+    private void insertTitleRequest(long memberId, String status, String badgeType) throws SQLException {
         update("""
                 INSERT INTO title_verification_request
-                (member_id, game_version, status, expires_at, created_at, updated_at)
-                VALUES (?, '4.4', ?, NOW(6) + INTERVAL 30 DAY, NOW(6), NOW(6))
-                """, memberId, status);
+                (member_id, game_version, badge_type, status, expires_at, created_at, updated_at)
+                VALUES (?, '4.4', ?, ?, NOW(6) + INTERVAL 30 DAY, NOW(6), NOW(6))
+                """, memberId, badgeType, status);
     }
 
     private boolean tableExists(String table) throws SQLException {

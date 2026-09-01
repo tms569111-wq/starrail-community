@@ -126,7 +126,7 @@ class TitleRequestPersistenceServiceTest {
                 memberService,
                 badgeService,
                 mock(AdminAuditService.class),
-                properties("4.5"),
+                properties(),
                 Clock.systemUTC(),
                 versionRepository,
                 mock(MemberNotificationService.class)
@@ -151,7 +151,7 @@ class TitleRequestPersistenceServiceTest {
                 memberService,
                 mock(BadgeService.class),
                 mock(AdminAuditService.class),
-                properties("4.5"),
+                properties(),
                 Clock.systemUTC(),
                 mock(GameVersionRepository.class),
                 mock(MemberNotificationService.class)
@@ -182,7 +182,7 @@ class TitleRequestPersistenceServiceTest {
                 mock(MemberService.class),
                 mock(BadgeService.class),
                 mock(AdminAuditService.class),
-                properties("4.5"),
+                properties(),
                 clock,
                 mock(GameVersionRepository.class),
                 mock(MemberNotificationService.class)
@@ -201,14 +201,14 @@ class TitleRequestPersistenceServiceTest {
     }
 
     @Test
-    void 현재_신청_버전이_아닌_값은_화면을_조작해도_거절한다() {
+    void 최소_지원_버전_이전_값은_화면을_조작해도_거절한다() {
         TitleVerificationRequestRepository repository =
                 mock(TitleVerificationRequestRepository.class);
         GameProfileRepository profileRepository = mock(GameProfileRepository.class);
         MemberService memberService = mock(MemberService.class);
         BadgeService badgeService = mock(BadgeService.class);
         AdminAuditService auditService = mock(AdminAuditService.class);
-        AppProperties properties = properties("4.5");
+        AppProperties properties = properties();
         GameVersionRepository versionRepository = mock(GameVersionRepository.class);
 
         when(memberService.requireActiveForWrite(7L)).thenReturn(mock(MemberAccount.class));
@@ -242,9 +242,9 @@ class TitleRequestPersistenceServiceTest {
         verify(repository, never()).save(org.mockito.ArgumentMatchers.any());
     }
 
-    private AppProperties properties(String platinumVersion) {
+    private AppProperties properties() {
         return new AppProperties(
-                new AppProperties.Operator("", platinumVersion, "", ""),
+                new AppProperties.Operator(""),
                 null,
                 null,
                 null,
@@ -266,7 +266,7 @@ class TitleRequestPersistenceServiceTest {
                 memberService,
                 mock(BadgeService.class),
                 mock(AdminAuditService.class),
-                properties("4.5"),
+                properties(),
                 Clock.systemUTC(),
                 versionRepository,
                 mock(MemberNotificationService.class)
