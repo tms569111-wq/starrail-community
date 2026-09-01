@@ -121,6 +121,54 @@ class ResilientGameProfileClientTest {
     }
 
     @Test
+    void 같은_UID라도_강제갱신과_일반조회는_single_flight를_공유하지_않는다() throws Exception {
+        AtomicInteger providerCalls = new AtomicInteger();
+        CountDownLatch bothEntered = new CountDownLatch(2);
+        CountDownLatch releaseProvider = new CountDownLatch(1);
+        PublicGameProfile expected = new PublicGameProfile(
+                ProfileProvider.ENKA, "800000001", "프로필", "", true, List.of()
+        );
+        ProfileProviderClient primary = new ProfileProviderClient() {
+            @Override
+            public ProfileProvider provider() {
+                return ProfileProvider.ENKA;
+            }
+
+            @Override
+            public PublicGameProfile fetch(String uid, boolean forceUpdate) {
+                providerCalls.incrementAndGet();
+                bothEntered.countDown();
+                await(releaseProvider);
+                return expected;
+            }
+        };
+        ResilientGameProfileClient client = new ResilientGameProfileClient(
+                List.of(primary), properties(100, 2, 2, Duration.ofSeconds(3)),
+                Clock.fixed(Instant.parse("2026-08-18T00:00:00Z"), ZoneOffset.UTC)
+        );
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        try {
+            Future<PublicGameProfile> normal = executor.submit(
+                    () -> client.fetch("800000001", false)
+            );
+            Future<PublicGameProfile> forced = executor.submit(
+                    () -> client.fetch("800000001", true)
+            );
+
+            assertThat(bothEntered.await(1, TimeUnit.SECONDS)).isTrue();
+            assertThat(providerCalls).hasValue(2);
+            releaseProvider.countDown();
+
+            assertThat(normal.get(2, TimeUnit.SECONDS)).isSameAs(expected);
+            assertThat(forced.get(2, TimeUnit.SECONDS)).isSameAs(expected);
+        } finally {
+            releaseProvider.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
     void 공급자_전체의_동시_호출_수를_제한한다() throws Exception {
         int workers = 6;
         AtomicInteger active = new AtomicInteger();
