@@ -61,10 +61,9 @@ public interface CharacterCommentRepository extends JpaRepository<CharacterComme
             """)
     List<ReplyCount> countActiveReplies(@Param("parentIds") Collection<Long> parentIds);
 
-    Optional<CharacterComment> findFirstByMember_IdAndEvaluation_IdAndStatusOrderByCreatedAtDesc(
+    Optional<CharacterComment> findFirstByMember_IdAndEvaluation_IdOrderByCreatedAtDesc(
             Long memberId,
-            Long evaluationId,
-            CommentStatus status
+            Long evaluationId
     );
 
     long countByMember_IdAndEvaluation_IdAndParentIsNullAndStatus(
