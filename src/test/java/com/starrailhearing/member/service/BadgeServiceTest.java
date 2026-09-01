@@ -16,6 +16,7 @@ import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,7 +37,6 @@ class BadgeServiceTest {
         when(memberService.require(7L)).thenReturn(member);
         when(repository.findByMember_IdAndGameVersion(7L, "4.5"))
                 .thenReturn(Optional.of(existing));
-        when(repository.findAllByMember_Id(7L)).thenReturn(List.of(existing));
         BadgeService service = new BadgeService(repository, memberService, CLOCK);
 
         service.grant(1L, 7L, "4.5", BadgeType.PLATINUM);
@@ -45,10 +45,11 @@ class BadgeServiceTest {
         assertThat(existing.getLabel()).isEqualTo("이상중재 플래티넘");
         verify(repository).save(existing);
         verify(repository).flush();
+        verify(repository, never()).findAllByMember_Id(7L);
     }
 
     @Test
-    void 보유_칭호는_버전_숫자순으로_최신_10개만_보여준다() {
+    void 보유_칭호는_DB_이력을_삭제하지_않고_화면에서만_최신_10개를_보여준다() {
         MemberBadgeRepository repository = mock(MemberBadgeRepository.class);
         MemberAccount member = MemberAccount.google("user", "user@example.com", "유저");
         List<MemberBadge> badges = IntStream.rangeClosed(1, 11)

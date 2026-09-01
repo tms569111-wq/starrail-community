@@ -42,7 +42,7 @@ public class CommentReport extends BaseTimeEntity {
     @Column(length = 500)
     private String details;
 
-    @Column(name = "content_snapshot", nullable = false, length = 1000)
+    @Column(name = "content_snapshot", nullable = false, length = 3000)
     private String contentSnapshot;
 
     @Enumerated(EnumType.STRING)

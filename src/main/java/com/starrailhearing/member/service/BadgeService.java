@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigInteger;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -20,7 +19,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class BadgeService {
-    private static final int MAXIMUM_BADGES_PER_MEMBER = 10;
+    private static final int MAXIMUM_VISIBLE_BADGES_PER_MEMBER = 10;
 
     private final MemberBadgeRepository repository;
     private final MemberService memberService;
@@ -68,7 +67,6 @@ public class BadgeService {
                 ));
         repository.save(badge);
         repository.flush();
-        trimBadgeHistory(memberId);
     }
 
     @Transactional
@@ -99,7 +97,7 @@ public class BadgeService {
 
     public List<BadgeView> activeBadges(long memberId) {
         return sortedActiveBadges(repository.findAllByMember_Id(memberId)).stream()
-                .limit(MAXIMUM_BADGES_PER_MEMBER)
+                .limit(MAXIMUM_VISIBLE_BADGES_PER_MEMBER)
                 .map(this::toView)
                 .toList();
     }
@@ -142,17 +140,6 @@ public class BadgeService {
                         this::compareVersions
                 ).reversed())
                 .toList();
-    }
-
-    private void trimBadgeHistory(long memberId) {
-        List<MemberBadge> badges = new ArrayList<>(repository.findAllByMember_Id(memberId));
-        badges.sort(Comparator.comparing(
-                MemberBadge::getGameVersion,
-                this::compareVersions
-        ).reversed());
-        if (badges.size() > MAXIMUM_BADGES_PER_MEMBER) {
-            repository.deleteAll(badges.subList(MAXIMUM_BADGES_PER_MEMBER, badges.size()));
-        }
     }
 
     private String normalizeVersion(String version) {

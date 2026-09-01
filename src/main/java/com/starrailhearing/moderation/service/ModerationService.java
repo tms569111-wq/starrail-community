@@ -254,7 +254,7 @@ public class ModerationService {
         actionRepository.saveAndFlush(new ModerationAction(
                 operator, target, targetType, targetId, type, reason, beforeState, afterState
         ));
-        actionRepository.deleteOutsideLatestOneHundred();
+        actionRepository.deleteOutsideRetentionWindow();
     }
 
     private void notifyReporter(

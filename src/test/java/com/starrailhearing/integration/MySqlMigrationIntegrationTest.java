@@ -176,14 +176,14 @@ class MySqlMigrationIntegrationTest {
     private void verifyFlywayHistory() throws SQLException {
         assertThat(queryLong("""
                 SELECT COUNT(*) FROM flyway_schema_history WHERE success = 1
-                """)).isEqualTo(16);
+                """)).isEqualTo(17);
         assertThat(queryLong("""
                 SELECT COUNT(*) FROM flyway_schema_history WHERE success = 0
                 """)).isZero();
         assertThat(queryString("""
                 SELECT version FROM flyway_schema_history
                 WHERE success = 1 ORDER BY installed_rank DESC LIMIT 1
-                """)).isEqualTo("16");
+                """)).isEqualTo("17");
         assertThat(queryLong("""
                 SELECT COUNT(DISTINCT index_name)
                 FROM information_schema.statistics
@@ -192,9 +192,17 @@ class MySqlMigrationIntegrationTest {
                   AND index_name IN (
                       'idx_character_comment_root_latest',
                       'idx_character_comment_root_best',
-                      'idx_character_comment_author_guard'
+                      'idx_character_comment_author_guard',
+                      'idx_character_comment_author_recent'
                   )
-                """)).isEqualTo(3);
+                """)).isEqualTo(4);
+        assertThat(queryLong("""
+                SELECT COUNT(DISTINCT index_name)
+                FROM information_schema.statistics
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'moderation_action'
+                  AND index_name = 'idx_moderation_recent'
+                """)).isEqualTo(1);
     }
 
     private void verifyMembersAndProviders(LegacyRows legacy) throws SQLException {
@@ -257,6 +265,13 @@ class MySqlMigrationIntegrationTest {
         assertThat(queryString("""
                 SELECT content_snapshot FROM comment_report WHERE id = ?
                 """, legacy.reportId())).isEqualTo("마이그레이션 전 댓글");
+        assertThat(queryLong("""
+                SELECT character_maximum_length
+                FROM information_schema.columns
+                WHERE table_schema = DATABASE()
+                  AND table_name = 'comment_report'
+                  AND column_name = 'content_snapshot'
+                """)).isEqualTo(3000);
         assertThat(queryString("""
                 SELECT action_type FROM moderation_action WHERE id = ?
                 """, legacy.moderationId())).isEqualTo("SUSPEND_PERMANENT");
