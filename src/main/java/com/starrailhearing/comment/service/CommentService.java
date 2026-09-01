@@ -39,7 +39,6 @@ public class CommentService {
 
     private static final int PAGE_SIZE = 20;
     private static final int MAX_PAGE_NUMBER = 100;
-    private static final String LIMITED_COMMENT_VERSION = "4.5";
     private static final long MAX_ROOT_COMMENTS_PER_CHARACTER = 10;
 
     private final MemberService memberService;
@@ -268,7 +267,6 @@ public class CommentService {
     }
 
     private void requireRootCommentLimit(long memberId, CharacterEvaluation evaluation) {
-        if (!LIMITED_COMMENT_VERSION.equals(evaluation.getGameVersion())) return;
         long count = commentRepository.countByMember_IdAndEvaluation_IdAndParentIsNullAndStatus(
                 memberId,
                 evaluation.getId(),
@@ -282,9 +280,7 @@ public class CommentService {
     private void requireWriteInterval(long memberId, long evaluationId) {
         LocalDateTime now = LocalDateTime.now(clock);
         commentRepository
-                .findFirstByMember_IdAndEvaluation_IdAndStatusOrderByCreatedAtDesc(
-                        memberId, evaluationId, CommentStatus.ACTIVE
-                )
+                .findFirstByMember_IdAndEvaluation_IdOrderByCreatedAtDesc(memberId, evaluationId)
                 .filter(comment -> comment.getCreatedAt().plusSeconds(20).isAfter(now))
                 .ifPresent(comment -> {
                     throw new AppException(ErrorCode.COMMENT_RATE_LIMIT);
