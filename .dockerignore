@@ -7,5 +7,13 @@ out
 *.iml
 *.log
 .env
+.env.*
+*.pem
+*.key
+*.p12
+*.jks
+backups
 private-uploads
 local-env.ps1
+application-local.yml
+src/main/resources/application-local.yml

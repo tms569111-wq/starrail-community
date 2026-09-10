@@ -28,6 +28,7 @@
 | `ENKA_REQUEST_WAIT_TIMEOUT` | `15s` | rate/concurrency 슬롯을 기다릴 최대 시간 |
 | `ENKA_BACKOFF_ON_429` | `30s` | HTTP 429 발생 후 Enka 전체 호출을 쉬는 최소 시간 |
 | `PROFILE_SYNC_COOLDOWN` | `3m` | 사용자 한 명의 UID 조회/갱신 간격 |
+| `PROFILE_CACHE_TTL` | `20s` | 공급자 fallback 결과를 포함한 프로필 조회 결과 캐시 시간 |
 | `PROFILE_CIRCUIT_FAILURE_THRESHOLD` | `3` | provider circuit을 열기 전 연속 장애 횟수 |
 | `PROFILE_CIRCUIT_OPEN_DURATION` | `30s` | 열린 provider circuit 유지 시간 |
 
